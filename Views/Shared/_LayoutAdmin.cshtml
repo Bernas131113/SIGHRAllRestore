@@ -4,38 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"] - SIGHR Admin</title>
-    @* Se você tiver um favicon ou apple-touch-icon comum para a área admin: *@
-    @* <link rel="apple-touch-icon" href="~/images/admin-icon.png" asp-append-version="true"> *@
 
-    @* Referência ao seu CSS de administração *@
+    <!-- Referência ao seu CSS de administração principal (contém estilos de menu hambúrguer) -->
     <link rel="stylesheet" href="~/css/adminarea.css" asp-append-version="true">
 
-    @* Se você usa Bootstrap ou outros CSS comuns na área de admin, adicione-os aqui *@
+    <!-- Referência ao CSS do Bootstrap (se não estiver já incluído no adminarea.css) -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
 
-    @* Permite que as views filhas adicionem seus próprios estilos *@
+    <!-- Permite que as Views filhas adicionem seus próprios estilos específicos -->
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <div class="sidebar">
+    <!-- Botão do Hambúrguer (aparece só em mobile) -->
+    <button id="hamburgerButton" class="hamburger-button">☰</button>
+
+    <!-- Overlay para quando o menu estiver aberto (aparece só em mobile) -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <!-- A sua Sidebar existente, com um novo ID para o JavaScript -->
+    <div class="sidebar" id="mainSidebar">
+        <!-- ADICIONADO id="mainSidebar" -->
         <div class="logo">
             <h4>Área do Administrador</h4>
         </div>
         <nav>
             <ul>
-                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && (ViewContext.RouteData.Values["action"]?.ToString() == "Index" || string.IsNullOrEmpty(ViewContext.RouteData.Values["action"]?.ToString())) ? "active" : "")">
+                <!-- Lógica de 'active' melhorada para corresponder ao controlador -->
+                <li class="@(IsControllerActive(ViewContext, "Admin") && IsRouteActive(ViewContext, "Admin", "Index") ? "active" : "")">
                     <a asp-controller="Admin" asp-action="Index">Registo de Entradas</a>
                 </li>
-                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Utilizadores" ? "active" : "")">
+                <li class="@(IsControllerActive(ViewContext, "Utilizadores") ? "active" : "")">
                     <a asp-controller="Utilizadores" asp-action="Index">Gestão de Utilizadores</a>
                 </li>
-                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Encomendas" ? "active" : "")">
+                <li class="@(IsControllerActive(ViewContext, "Encomendas") && IsRouteActive(ViewContext, "Encomendas", "Index") ? "active" : "")">
                     <a asp-controller="Encomendas" asp-action="Index">Encomendas</a>
                 </li>
-                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Faltas" && ViewContext.RouteData.Values["action"]?.ToString() == "GestaoAdmin" ? "active" : "")">
+                <li class="@(IsControllerActive(ViewContext, "Faltas") && IsRouteActive(ViewContext, "Faltas", "GestaoAdmin") ? "active" : "")">
                     <a asp-controller="Faltas" asp-action="GestaoAdmin">Gestão de Faltas</a>
                 </li>
-                @* Adicione outros links de admin aqui *@
             </ul>
         </nav>
         <form asp-controller="Admin" asp-action="Logout" method="post" id="adminLayoutLogoutForm">
@@ -44,17 +50,38 @@
     </div>
 
     <main role="main" class="admin-main-content">
-        @* Adicionada classe para estilização se necessário *@
-        @* O conteúdo específico de cada página de admin será renderizado aqui *@
         @RenderBody()
     </main>
 
-    @* Scripts comuns da área de admin podem ir aqui *@
-     <script src="~/lib/jquery/dist/jquery.min.js"></script> 
-     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script> 
-    
+    <!-- Scripts jQuery e Bootstrap (se não estiverem já no adminarea.css) -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
-    @* Permite que as views filhas adicionem seus próprios scripts *@
+    <!-- Script JavaScript para o menu hambúrguer -->
+    <script src="~/js/layout-scripts.js" asp-append-version="true"></script>
+
+    <!-- Permite que as Views filhas adicionem seus próprios scripts -->
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+@functions {
+    // Estas funções auxiliares devem estar definidas no seu _LayoutCollaborator.cshtml também.
+    // Se o seu _LayoutAdmin.cshtml já herda de um _ViewStart com um @functions block,
+    // pode não precisar de os definir aqui, mas tê-los em ambos é seguro.
+
+    public static bool IsControllerActive(ViewContext viewContext, string controllerName)
+    {
+        var currentController = viewContext.RouteData.Values["controller"]?.ToString();
+        return currentController != null && currentController.Equals(controllerName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Função adicional para verificar Controller E Action (mais precisa)
+    public static bool IsRouteActive(ViewContext viewContext, string controllerName, string actionName)
+    {
+        var currentController = viewContext.RouteData.Values["controller"]?.ToString();
+        var currentAction = viewContext.RouteData.Values["action"]?.ToString();
+        return currentController != null && currentController.Equals(controllerName, StringComparison.OrdinalIgnoreCase) &&
+               currentAction != null && currentAction.Equals(actionName, StringComparison.OrdinalIgnoreCase);
+    }
+}

@@ -16,6 +16,10 @@ using SIGHR.Areas.Identity.Data;
 
 namespace SIGHR.Controllers
 {
+    /// <summary>
+    /// Controlador responsável por servir as páginas (Views) relacionadas com encomendas.
+    /// A lógica de API foi movida para o EncomendasApiController.
+    /// </summary>
     [Authorize]
     public class EncomendasController : Controller
     {
@@ -23,7 +27,9 @@ namespace SIGHR.Controllers
         private readonly UserManager<SIGHRUser> _userManager;
         private readonly ILogger<EncomendasController> _logger;
 
-        private static readonly List<SelectListItem> ListaDeMateriaisFixa = new List<SelectListItem> { /* ... sua lista fixa ... */ };
+        // Lista estática de materiais para o formulário. Numa app real, viria da BD.
+        // Já não é estática, removemos a ListaDeMateriaisFixa e usamos o _context.Materiais
+        /* private static readonly List<SelectListItem> ListaDeMateriaisFixa = new List<SelectListItem> { ... }; */
 
         public EncomendasController(SIGHRContext context, UserManager<SIGHRUser> userManager, ILogger<EncomendasController> logger)
         {
@@ -32,6 +38,9 @@ namespace SIGHR.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Apresenta a página de gestão de todas as encomendas para administradores.
+        /// </summary>
         [HttpGet]
         [Authorize(Policy = "AdminAccessUI")]
         public IActionResult Index()
@@ -40,6 +49,9 @@ namespace SIGHR.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Apresenta a lista de encomendas do utilizador atualmente autenticado.
+        /// </summary>
         [HttpGet]
         [Authorize(Policy = "CollaboratorAccessUI")]
         public async Task<IActionResult> MinhasEncomendas(DateTime? filtroData, string? filtroEstado)
@@ -53,13 +65,13 @@ namespace SIGHR.Controllers
                     .ThenInclude(r => r.Material)
                 .Where(e => e.UtilizadorId == userId);
 
-            // ---- CORREÇÃO APLICADA AQUI ----
+            // --- CORREÇÃO: Data do filtro convertida para UTC para comparação ---
             if (filtroData.HasValue)
             {
-                var filtroDataUtc = filtroData.Value.ToUniversalTime(); // Converte o filtro para UTC
+                var filtroDataUtc = filtroData.Value.ToUniversalTime();
                 query = query.Where(e => e.Data.Date == filtroDataUtc.Date); // Compara com a data em UTC
             }
-            // --------------------------------
+            // -----------------------------------------------------------------
 
             if (!string.IsNullOrEmpty(filtroEstado)) query = query.Where(e => e.Estado == filtroEstado);
 
@@ -68,7 +80,7 @@ namespace SIGHR.Controllers
                 .Select(e => new MinhaEncomendaViewModel
                 {
                     EncomendaId = e.Id,
-                    DataEncomenda = e.Data,
+                    DataEncomenda = e.Data, // Esta data já vem da BD como UTC, não precisa de converter
                     DescricaoResumida = (e.Requisicoes != null && e.Requisicoes.Any()) ?
                         string.Join(", ", e.Requisicoes
                             .Where(r => r.Material != null)
@@ -86,24 +98,32 @@ namespace SIGHR.Controllers
             return View(minhasEncomendasViewModels);
         }
 
+        /// <summary>
+        /// Apresenta o formulário para registar uma nova encomenda.
+        /// </summary>
         [HttpGet]
         [Authorize(Policy = "CollaboratorAccessUI")]
         public async Task<IActionResult> Registar()
         {
             ViewData["Title"] = "Registar Nova Encomenda";
-            var materiaisDisponiveis = await _context.Materiais // <<-- ADICIONAR ESTAS LINHAS
-                                        .OrderBy(m => m.Descricao)
-                                        .Select(m => new SelectListItem { Value = m.Descricao, Text = m.Descricao })
-                                        .ToListAsync();
+            // --- CORREÇÃO: Materiais agora vêm da base de dados ---
+            var materiaisDisponiveis = await _context.Materiais
+                                                    .OrderBy(m => m.Descricao)
+                                                    .Select(m => new SelectListItem { Value = m.Descricao, Text = m.Descricao })
+                                                    .ToListAsync();
+            // ---------------------------------------------------
             var viewModel = new RegistarEncomendaViewModel
             {
-                DataEncomenda = DateTime.Today.ToUniversalTime(),
+                DataEncomenda = DateTime.Today.ToUniversalTime(), // --- CORREÇÃO: Data da encomenda no formulário GET guardada em UTC ---
                 ItensRequisicao = new List<ItemRequisicaoViewModel> { new ItemRequisicaoViewModel { Quantidade = 1 } },
-                MateriaisDisponiveis = new SelectList(materiaisDisponiveis, "Value", "Text") // <<-- ESTÁ CORRETO
+                MateriaisDisponiveis = new SelectList(materiaisDisponiveis, "Value", "Text")
             };
             return View(viewModel);
         }
 
+        /// <summary>
+        /// Processa a submissão do formulário de registo de uma nova encomenda.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "CollaboratorAccessUI")]
@@ -112,7 +132,13 @@ namespace SIGHR.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId)) return Unauthorized("Utilizador não autenticado.");
 
-            model.MateriaisDisponiveis = new SelectList(ListaDeMateriaisFixa, "Value", "Text");
+            // --- CORREÇÃO: Materiais vêm da base de dados para repopular o dropdown em caso de erro ---
+            var materiaisDisponiveisParaModel = await _context.Materiais
+                                                            .OrderBy(m => m.Descricao)
+                                                            .Select(m => new SelectListItem { Value = m.Descricao, Text = m.Descricao })
+                                                            .ToListAsync();
+            model.MateriaisDisponiveis = new SelectList(materiaisDisponiveisParaModel, "Value", "Text", model.MateriaisDisponiveis?.SelectedValue);
+            // -----------------------------------------------------------------------------------------
 
             bool itensSaoValidos = true;
             if (model.ItensRequisicao == null || !model.ItensRequisicao.Any())
@@ -134,7 +160,7 @@ namespace SIGHR.Controllers
                 var novaEncomenda = new Encomenda
                 {
                     UtilizadorId = userId,
-                    Data = model.DataEncomenda.ToUniversalTime(), // <<-- CORREÇÃO APLICADA AQUI (data em UTC)
+                    Data = model.DataEncomenda.ToUniversalTime(), // --- CORREÇÃO: Data da encomenda guardada em UTC ---
                     Estado = "Pendente",
                     Quantidade = model.ItensRequisicao!.Count,
                     DescricaoObra = model.DescricaoObra,
