@@ -2,70 +2,52 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using SIGHR.Areas.Identity.Data; // Namespace para a classe SIGHRUser
+using SIGHR.Areas.Identity.Data;
 
 namespace SIGHR.Models
 {
     /// <summary>
     /// Representa um registo diário de ponto de um utilizador.
     /// Contém todas as marcações de entrada e saída.
+    /// As horas são agora guardadas como DateTime (UTC) para lidar com fusos horários.
     /// </summary>
     public class Horario
     {
-        //
-        // Bloco: Propriedades Principais da Entidade
-        //
-
-        /// <summary>
-        /// O identificador único do registo de horário (Chave Primária).
-        /// </summary>
         public long Id { get; set; }
 
-        /// <summary>
-        /// Chave estrangeira que referencia o ID do utilizador a quem este registo pertence.
-        /// </summary>
         [Required(ErrorMessage = "O ID do utilizador é obrigatório.")]
         public required string UtilizadorId { get; set; }
 
         /// <summary>
-        /// A data a que este registo de ponto se refere.
+        /// A data do registo de ponto (sem hora, ou com hora 00:00:00 UTC).
         /// </summary>
         [Required(ErrorMessage = "A data é obrigatória.")]
         public DateTime Data { get; set; }
 
         /// <summary>
-        /// A hora de início do dia de trabalho.
+        /// A hora de início do dia de trabalho (registada em UTC).
         /// </summary>
-        [Required]
-        public TimeSpan HoraEntrada { get; set; }
+        [Required(ErrorMessage = "A hora de entrada é obrigatória.")]
+        public DateTime HoraEntrada { get; set; } // ALTERADO DE TimeSpan PARA DateTime
 
         /// <summary>
-        /// A hora de fim do dia de trabalho.
+        /// A hora de fim do dia de trabalho (registada em UTC).
         /// </summary>
-        [Required]
-        public TimeSpan HoraSaida { get; set; }
+        [Required(ErrorMessage = "A hora de saída é obrigatória.")]
+        public DateTime HoraSaida { get; set; } // ALTERADO DE TimeSpan PARA DateTime
 
         /// <summary>
-        /// A hora de regresso do almoço.
+        /// A hora de regresso do almoço (registada em UTC).
         /// </summary>
-        [Required]
-        public TimeSpan EntradaAlmoco { get; set; }
+        [Required(ErrorMessage = "A hora de entrada do almoço é obrigatória.")]
+        public DateTime EntradaAlmoco { get; set; } // ALTERADO DE TimeSpan PARA DateTime
 
         /// <summary>
-        /// A hora de saída para o almoço.
+        /// A hora de saída para o almoço (registada em UTC).
         /// </summary>
-        [Required]
-        public TimeSpan SaidaAlmoco { get; set; }
+        [Required(ErrorMessage = "A hora de saída para almoço é obrigatória.")]
+        public DateTime SaidaAlmoco { get; set; } // ALTERADO DE TimeSpan PARA DateTime
 
-        //
-        // Bloco: Propriedade de Navegação (Relação)
-        //
-
-        /// <summary>
-        /// Propriedade de navegação que permite ao Entity Framework carregar
-        /// o objeto SIGHRUser associado a este registo de horário.
-        /// A palavra-chave 'virtual' permite o carregamento preguiçoso (lazy loading), se ativado.
-        /// </summary>
         [ForeignKey("UtilizadorId")]
         public virtual SIGHRUser? User { get; set; }
     }

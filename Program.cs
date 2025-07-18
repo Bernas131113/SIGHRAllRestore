@@ -14,6 +14,8 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
+using Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime;
+using NodaTime;
 using System.Linq; // Necessário para .Linq
 
 var builder = WebApplication.CreateBuilder(args);

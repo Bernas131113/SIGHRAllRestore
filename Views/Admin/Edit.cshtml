@@ -62,8 +62,8 @@
 
     <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-        <input type="hidden" asp-for="Id" /> @* Campo oculto para passar o ID do horário *@
-        <input type="hidden" asp-for="NomeUtilizador" /> @* Opcional: para repopular o título em caso de erro *@
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="NomeUtilizador" />
 
         <div class="form-group">
             <label asp-for="Data" class="form-label"></label>
@@ -72,22 +72,22 @@
         </div>
         <div class="form-group">
             <label asp-for="HoraEntrada" class="form-label"></label>
-            <input asp-for="HoraEntrada" type="time" class="form-control" />
+            <input asp-for="HoraEntrada" type="time" class="form-control" step="1" />
             <span asp-validation-for="HoraEntrada" class="text-danger"></span>
         </div>
         <div class="form-group">
             <label asp-for="SaidaAlmoco" class="form-label"></label>
-            <input asp-for="SaidaAlmoco" type="time" class="form-control" />
+            <input asp-for="SaidaAlmoco" type="time" class="form-control" step="1" />
             <span asp-validation-for="SaidaAlmoco" class="text-danger"></span>
         </div>
         <div class="form-group">
             <label asp-for="EntradaAlmoco" class="form-label"></label>
-            <input asp-for="EntradaAlmoco" type="time" class="form-control" />
+            <input asp-for="EntradaAlmoco" type="time" class="form-control" step="1" />
             <span asp-validation-for="EntradaAlmoco" class="text-danger"></span>
         </div>
         <div class="form-group">
             <label asp-for="HoraSaida" class="form-label"></label>
-            <input asp-for="HoraSaida" type="time" class="form-control" />
+            <input asp-for="HoraSaida" type="time" class="form-control" step="1" />
             <span asp-validation-for="HoraSaida" class="text-danger"></span>
         </div>
 

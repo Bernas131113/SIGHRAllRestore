@@ -7,6 +7,7 @@ namespace SIGHR.Models.ViewModels
     /// <summary>
     /// ViewModel para apresentar os detalhes de uma falta, incluindo o nome do utilizador associado.
     /// É usado nas listas de faltas (tanto na área do colaborador como na do administrador).
+    /// As horas de início e fim da falta são representadas como DateTime para consistência de fuso horário.
     /// </summary>
     public class FaltaComUserNameViewModel
     {
@@ -29,18 +30,18 @@ namespace SIGHR.Models.ViewModels
         public DateTime DataFalta { get; set; }
 
         /// <summary>
-        /// A hora de início da ausência.
+        /// A hora de início da ausência (registada em UTC na base de dados).
         /// </summary>
         [Display(Name = "Início")]
         [DataType(DataType.Time)]
-        public TimeSpan Inicio { get; set; }
+        public DateTime Inicio { get; set; } // <<-- TEM DE SER DateTime AQUI!
 
         /// <summary>
-        /// A hora de fim da ausência.
+        /// A hora de fim da ausência (registada em UTC na base de dados).
         /// </summary>
         [Display(Name = "Fim")]
         [DataType(DataType.Time)]
-        public TimeSpan Fim { get; set; }
+        public DateTime Fim { get; set; } // <<-- TEM DE SER DateTime AQUI!
 
         /// <summary>
         /// A justificação ou motivo da falta.

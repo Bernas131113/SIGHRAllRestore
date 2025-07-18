@@ -3,7 +3,6 @@
 document.addEventListener('DOMContentLoaded', function () {
     //
     // Bloco de Inicialização e Seleção de Elementos
-    // Guarda referências aos elementos do DOM para evitar procurá-los repetidamente.
     //
     const loadingMsg = document.getElementById('loading-message-ponto');
     const successMsg = document.getElementById('success-message-ponto');
@@ -11,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /**
      * Obtém o token anti-falsificação (anti-forgery) do input oculto na página.
-     * Essencial para a segurança dos pedidos POST.
      * @returns {string} O valor do token ou uma string vazia se não for encontrado.
      */
     function getAntiForgeryToken() {
@@ -19,10 +17,8 @@ document.addEventListener('DOMContentLoaded', function () {
         return tokenInput ? tokenInput.value : '';
     }
 
-
     //
     // Bloco de Funções de Feedback Visual (Notificações)
-    // Controla a apresentação de mensagens ao utilizador.
     //
 
     /**
@@ -72,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     //
-    // Bloco de Comunicação com a API
+    // Bloco de Comunicação com a API e Atualização da UI
     //
 
     /**
@@ -119,6 +115,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /**
+     * Função auxiliar para formatar a hora de um objeto Date para HH:MM no fuso horário local e em formato de 24 horas.
+     * @param {string} dateString - A data/hora em formato string ISO 8601 (ex: "2024-01-01T10:00:00Z").
+     */
+    function formatTimeForDisplay(dateString) {
+        // Verifica se a string é uma data "zero" (MinValue do .NET) ou inválida.
+        if (!dateString || dateString.startsWith('0001-01-01')) {
+            return '--:--';
+        }
+        try {
+            const date = new Date(dateString);
+
+            // toLocaleTimeString formata para o fuso horário local do utilizador.
+            // hour12: false força o formato de 24 horas.
+            return date.toLocaleTimeString('pt-PT', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        } catch (e) {
+            console.error("Erro ao formatar hora:", dateString, e);
+            return 'Inválido';
+        }
+    }
+
+    /**
      * Pede os dados de ponto do dia atual à API e atualiza os campos na página.
      */
     async function fetchPontoDoDia() {
@@ -126,8 +147,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const displaySaidaAlmoco = document.getElementById('displaySaidaAlmoco');
         const displayEntradaAlmoco = document.getElementById('displayEntradaAlmoco');
         const displaySaida = document.getElementById('displaySaida');
+        const noRecordMsg = document.getElementById('no-record-today-message');
 
-        if (!displayEntrada) return;
+        if (!displayEntrada) {
+            console.error("Elementos de exibição de ponto não encontrados no DOM.");
+            return;
+        }
 
         if (typeof urls === 'undefined' || !urls.getPontoDoDia) {
             console.error("URL 'getPontoDoDia' não está definida.");
@@ -138,10 +163,20 @@ document.addEventListener('DOMContentLoaded', function () {
             const response = await fetch(urls.getPontoDoDia);
             if (response.ok) {
                 const data = await response.json();
-                displayEntrada.textContent = data.horaEntrada && data.horaEntrada !== "00:00:00" ? data.horaEntrada.substring(0, 5) : '--:--';
-                displaySaidaAlmoco.textContent = data.saidaAlmoco && data.saidaAlmoco !== "00:00:00" ? data.saidaAlmoco.substring(0, 5) : '--:--';
-                displayEntradaAlmoco.textContent = data.entradaAlmoco && data.entradaAlmoco !== "00:00:00" ? data.entradaAlmoco.substring(0, 5) : '--:--';
-                displaySaida.textContent = data.horaSaida && data.horaSaida !== "00:00:00" ? data.horaSaida.substring(0, 5) : '--:--';
+
+                // Atualiza os spans com os valores formatados.
+                displayEntrada.textContent = formatTimeForDisplay(data.horaEntrada);
+                displaySaidaAlmoco.textContent = formatTimeForDisplay(data.saidaAlmoco);
+                displayEntradaAlmoco.textContent = formatTimeForDisplay(data.entradaAlmoco);
+                displaySaida.textContent = formatTimeForDisplay(data.horaSaida);
+
+                // Esconde a mensagem "Nenhum registo" se a entrada foi registada.
+                if (data.horaEntrada && !data.horaEntrada.startsWith('0001-01-01')) {
+                    if (noRecordMsg) noRecordMsg.style.display = 'none';
+                } else {
+                    if (noRecordMsg) noRecordMsg.style.display = 'block';
+                }
+
             } else {
                 console.error("Erro ao obter o ponto do dia:", response.statusText);
             }
@@ -149,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Erro de rede ao obter o ponto do dia:', error);
         }
     }
-
 
     //
     // Bloco de Configuração de Eventos

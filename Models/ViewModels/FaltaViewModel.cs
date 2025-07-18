@@ -6,37 +6,31 @@ namespace SIGHR.Models.ViewModels
 {
     /// <summary>
     /// ViewModel que representa os dados necessários para registar uma nova falta.
-    /// Contém as propriedades e as regras de validação (Data Annotations) para o formulário de registo.
+    /// As horas são agora DateTime.
     /// </summary>
     public class FaltaViewModel
     {
-        /// <summary>
-        /// A data em que a ausência ocorreu. É um campo obrigatório.
-        /// </summary>
         [Required(ErrorMessage = "A data da falta é obrigatória.")]
         [DataType(DataType.Date)]
         [Display(Name = "Data da Falta")]
         public DateTime DataFalta { get; set; } = DateTime.Today;
 
         /// <summary>
-        /// A hora de início da ausência. É um campo obrigatório.
+        /// A hora de início da ausência.
         /// </summary>
         [Required(ErrorMessage = "A hora de início é obrigatória.")]
-        [DataType(DataType.Time)]
+        [DataType(DataType.Time)] // Usamos DataType.Time para hints da UI
         [Display(Name = "Hora de Início")]
-        public TimeSpan Inicio { get; set; } // Sendo um 'struct', o valor padrão é TimeSpan.Zero.
+        public DateTime Inicio { get; set; } = DateTime.Today; // ALTERADO DE TimeSpan PARA DateTime
 
         /// <summary>
-        /// A hora de fim da ausência. É um campo obrigatório.
+        /// A hora de fim da ausência.
         /// </summary>
         [Required(ErrorMessage = "A hora de fim é obrigatória.")]
-        [DataType(DataType.Time)]
+        [DataType(DataType.Time)] // Usamos DataType.Time para hints da UI
         [Display(Name = "Hora de Fim")]
-        public TimeSpan Fim { get; set; }
+        public DateTime Fim { get; set; } = DateTime.Today.AddHours(1); // ALTERADO DE TimeSpan PARA DateTime
 
-        /// <summary>
-        /// A justificação ou motivo da falta. É um campo de texto obrigatório.
-        /// </summary>
         [Required(ErrorMessage = "O motivo é obrigatório.")]
         [StringLength(500, ErrorMessage = "O motivo não pode exceder os 500 caracteres.")]
         [DataType(DataType.MultilineText)]
