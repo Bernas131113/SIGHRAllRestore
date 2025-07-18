@@ -1,0 +1,186 @@
+﻿@model SIGHR.Models.ViewModels.FaltaViewModel
+@{
+    ViewData["Title"] = "Registar Nova Falta";
+    Layout = "_LayoutCollaborator"; // Usa o layout com a sidebar
+}
+
+@section Styles {
+    <style>
+        /* Estilos específicos para a página Registar Falta */
+        /* Esses estilos complementam ou sobrescrevem o que vem do layout e do adminarea.css */
+
+        /* Container principal do formulário dentro da área de conteúdo do layout */
+        .faltas-form-card {
+            background: white;
+            padding: 30px 40px; /* Mais padding horizontal */
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 700px; /* Largura máxima do formulário */
+            margin-top: 20px; /* Espaço acima do formulário */
+            /* Se o .main-content-area do layout não centralizar, você pode adicionar: */
+            margin-left: 400px; 
+            /* margin-right: auto; */
+        }
+
+        .faltas-form-card h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+            color: #333;
+        }
+
+        .form-group { /* Estilo para os grupos de formulário */
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label { /* Estilo para os labels */
+            display: block;
+            margin-bottom: .5rem;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        /* Estilo para inputs e textarea - se não vier do Bootstrap ou adminarea.css */
+        .form-control {
+            display: block;
+            width: 100%;
+            padding: .75rem 1rem;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: #495057;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            border-radius: .375rem;
+            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        }
+
+        .form-control:focus {
+            color: #495057;
+            background-color: #fff;
+            border-color: #86b7fe; /* Cor de foco do Bootstrap */
+            outline: 0;
+            box-shadow: 0 0 0 .25rem rgba(13,110,253,.25); /* Sombra de foco do Bootstrap */
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+        }
+
+        /* Para layout de colunas (se não estiver usando Bootstrap row/col) */
+        .form-row-halves {
+            display: flex;
+            gap: 20px; /* Espaço entre os inputs de hora */
+            margin-bottom: 1.25rem;
+        }
+
+        .form-row-halves > div {
+            flex: 1; /* Faz cada input de hora ocupar metade do espaço */
+        }
+
+
+        .btn-group-actions {
+            display: flex;
+            justify-content: center; /* Centraliza os botões */
+            gap: 15px; /* Espaço entre os botões */
+            margin-top: 25px;
+        }
+
+        /* Estilos básicos para botões, se não vierem do seu CSS principal */
+        .btn {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            color: white; /* Cor de texto padrão para botões */
+        }
+        .btn-primary { /* Exemplo de botão primário (Registar) */
+            background-color: #28a745; /* Verde */
+            border-color: #28a745;
+        }
+        .btn-primary:hover {
+            background-color: #218838;
+        }
+        .btn-secondary { /* Exemplo de botão secundário (Cancelar) */
+            background-color: #dc3545; /* Vermelho */
+            border-color: #dc3545;
+        }
+        .btn-secondary:hover {
+            background-color: #c82333;
+        }
+
+        /* Para mensagens de validação do ASP.NET Core */
+        .text-danger {
+            color: #dc3545;
+            font-size: 0.875em; /* Tamanho menor para mensagens de erro */
+        }
+
+        /* Para a mensagem de sucesso do TempData */
+        .alert-success {
+            color: #0f5132;
+            background-color: #d1e7dd;
+            border-color: #badbcc;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            border-radius: .375rem;
+            text-align: center;
+        }
+
+    </style>
+}
+
+<div class="faltas-form-card"> @* Este container será centralizado pelo .main-content-area do layout *@
+    <h1>@ViewData["Title"]</h1>
+    <hr class="mb-4" />
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success" role="alert">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <form asp-controller="Faltas" asp-action="Registar" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="form-group">
+            <label asp-for="DataFalta" class="form-label"></label>
+            <input asp-for="DataFalta" class="form-control" />
+            <span asp-validation-for="DataFalta" class="text-danger"></span>
+        </div>
+
+        @* Usando a classe .form-row-halves para os campos de hora lado a lado *@
+        <div class="form-row-halves">
+            <div> @* Div para o input de Início *@
+                <label asp-for="Inicio" class="form-label"></label>
+                <input asp-for="Inicio" class="form-control" />
+                <span asp-validation-for="Inicio" class="text-danger"></span>
+            </div>
+            <div> @* Div para o input de Fim *@
+                <label asp-for="Fim" class="form-label"></label>
+                <input asp-for="Fim" class="form-control" />
+                <span asp-validation-for="Fim" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Motivo" class="form-label"></label>
+            <textarea asp-for="Motivo" class="form-control" rows="4" placeholder="Descreva o motivo da falta"></textarea>
+            <span asp-validation-for="Motivo" class="text-danger"></span>
+        </div>
+
+        <div class="btn-group-actions">
+            <button type="submit" class="btn btn-primary">Registar Falta</button>
+            <a asp-controller="Collaborator" asp-action="Dashboard" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
