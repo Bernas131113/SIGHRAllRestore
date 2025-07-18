@@ -1,0 +1,105 @@
+﻿@model SIGHR.Models.ViewModels.EditHorarioViewModel
+
+@{
+    ViewData["Title"] = "Editar Registo de Ponto"; // Será sobrescrito pelo Controller
+    Layout = "_LayoutAdmin";
+}
+
+@section Styles {
+    <style>
+        /* Estilos do formulário de edição (copiado do RegistarEncomenda) */
+        .form-container {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            max-width: 700px;
+            margin: 20px auto;
+            text-align: center; /* Centraliza o h1/h4 */
+        }
+
+            .form-container h1, .form-container h4 {
+                margin-bottom: 25px;
+                font-size: 1.8rem;
+                color: #333;
+            }
+
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left; /* Alinha labels e inputs à esquerda dentro do form-group */
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: .5rem;
+            font-weight: 500;
+        }
+
+        .form-control, .form-select {
+            display: block;
+            width: 100%;
+            padding: .375rem .75rem;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: .25rem;
+        }
+
+        .btn-group-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        /* Estilos dos botões 3D (já devem vir do adminarea.css) */
+        /* .btn-custom-style, .btn-green-custom, .btn-red-custom */
+    </style>
+}
+
+<div class="form-container">
+    <h1>@ViewData["Title"]</h1>
+    <h4 class="text-muted">Utilizador: @Model.NomeUtilizador</h4>
+    <hr class="mb-3" />
+
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <input type="hidden" asp-for="Id" /> @* Campo oculto para passar o ID do horário *@
+        <input type="hidden" asp-for="NomeUtilizador" /> @* Opcional: para repopular o título em caso de erro *@
+
+        <div class="form-group">
+            <label asp-for="Data" class="form-label"></label>
+            <input asp-for="Data" type="date" class="form-control" />
+            <span asp-validation-for="Data" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="HoraEntrada" class="form-label"></label>
+            <input asp-for="HoraEntrada" type="time" class="form-control" />
+            <span asp-validation-for="HoraEntrada" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="SaidaAlmoco" class="form-label"></label>
+            <input asp-for="SaidaAlmoco" type="time" class="form-control" />
+            <span asp-validation-for="SaidaAlmoco" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="EntradaAlmoco" class="form-label"></label>
+            <input asp-for="EntradaAlmoco" type="time" class="form-control" />
+            <span asp-validation-for="EntradaAlmoco" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="HoraSaida" class="form-label"></label>
+            <input asp-for="HoraSaida" type="time" class="form-control" />
+            <span asp-validation-for="HoraSaida" class="text-danger"></span>
+        </div>
+
+        <div class="btn-group-actions">
+            <button type="submit" class="btn-custom-style btn-green-custom">Guardar Alterações</button>
+            <a asp-action="Index" class="btn-custom-style btn-red-custom">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

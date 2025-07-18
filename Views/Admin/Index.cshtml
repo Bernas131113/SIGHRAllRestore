@@ -81,6 +81,11 @@
         .table tbody td {
             vertical-align: middle;
         }
+
+        /* Adiciona espaçamento entre os botões na célula da tabela */
+        .table-actions-cell a {
+            margin-right: 5px; /* Espaço entre os botões */
+        }
     </style>
 }
 
@@ -92,11 +97,7 @@
         <h2>@ViewData["Title"]</h2>
         <div class="action-buttons">
             <button type="button" onclick="downloadHorariosExcelComFiltros()" class="btn download-btn">Transferir Excel</button>
-            @*
-            <button id="editar-btn" class="edit-btn" onclick="habilitarEdicao()">Editar</button>
-            <button id="concluir-btn" class="edit-btn" onclick="salvarEdicoes()" style="display: none;">Concluído</button>
-            <button id="btn-excluir" class="delete-btn" onclick="ativarModoExclusao()">Excluir</button>
-            *@
+            @* Pode adicionar aqui um botão para criar novo registo ou outras ações globais *@
         </div>
     </div>
 
@@ -127,6 +128,7 @@
                         <th>Entrada Almoço</th>
                         <th>Saída</th>
                         <th>Total de Horas</th>
+                        <th>Ações</th> @* <-- NOVA COLUNA DE AÇÕES *@
                     </tr>
                 </thead>
                 <tbody>
@@ -140,6 +142,15 @@
                             <td>@(item.EntradaAlmoco == TimeSpan.Zero ? "--:--" : item.EntradaAlmoco.ToString(@"hh\:mm"))</td>
                             <td>@(item.HoraSaida == TimeSpan.Zero ? "--:--" : item.HoraSaida.ToString(@"hh\:mm"))</td>
                             <td>@Html.DisplayFor(modelItem => item.TotalHorasTrabalhadas)</td>
+                            <td class="table-actions-cell">
+                                @* <-- NOVA CÉLULA DE AÇÕES *@
+                                <!-- Link para a Action de Edição no AdminController -->
+                                <!-- Usei 'btn-sm' para botões menores na tabela e 'edit-btn' para o estilo 3D amarelo -->
+                                <a asp-action="Edit" asp-route-id="@item.HorarioId" class="btn btn-sm edit-btn">Editar</a>
+                                @* Pode adicionar um botão de Delete aqui mais tarde se quiser:
+                                <a asp-action="Delete" asp-route-id="@item.HorarioId" class="btn btn-sm delete-btn">Excluir</a>
+                                *@
+                            </td>
                         </tr>
                     }
                 </tbody>
