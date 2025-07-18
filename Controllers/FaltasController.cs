@@ -14,6 +14,10 @@ using SIGHR.Areas.Identity.Data;
 
 namespace SIGHR.Controllers
 {
+    /// <summary>
+    /// Controlador responsável por servir as páginas (Views) relacionadas com faltas.
+    /// A lógica de API foi movida para o FaltasApiController.
+    /// </summary>
     [Authorize]
     public class FaltasController : Controller
     {
@@ -29,18 +33,24 @@ namespace SIGHR.Controllers
         }
 
         // --- ACTIONS PARA COLABORADORES ---
+
+        /// <summary>
+        /// Apresenta o formulário para um utilizador registar uma falta para si próprio.
+        /// </summary>
         [HttpGet]
         [Authorize(Policy = "CollaboratorAccessUI")]
         public IActionResult Registar()
         {
             var model = new FaltaViewModel
             {
-                DataFalta = DateTime.Today,
-                Motivo = string.Empty
+                DataFalta = DateTime.Today // DataFalta aqui é local, será convertida no POST
             };
             return View(model);
         }
 
+        /// <summary>
+        /// Processa a submissão do formulário de registo de uma nova falta.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "CollaboratorAccessUI")]
@@ -62,8 +72,8 @@ namespace SIGHR.Controllers
                 var falta = new Falta
                 {
                     UtilizadorId = userId,
-                    Data = DateTime.Now.ToUniversalTime(), // <<-- CORREÇÃO APLICADA AQUI (Data do Registo em UTC)
-                    DataFalta = model.DataFalta.ToUniversalTime(), // <<-- CORREÇÃO APLICADA AQUI (Data da Falta em UTC)
+                    Data = DateTime.Now.ToUniversalTime(), // --- CORREÇÃO: Data do registo guardada em UTC ---
+                    DataFalta = model.DataFalta.ToUniversalTime(), // --- CORREÇÃO: Data da falta (do formulário) guardada em UTC ---
                     Inicio = model.Inicio,
                     Fim = model.Fim,
                     Motivo = model.Motivo
@@ -79,6 +89,9 @@ namespace SIGHR.Controllers
             return View(model);
         }
 
+        /// <summary>
+        /// Apresenta a lista de faltas do utilizador atualmente autenticado.
+        /// </summary>
         [HttpGet]
         [Authorize(Policy = "CollaboratorAccessUI")]
         public async Task<IActionResult> MinhasFaltas()
@@ -90,24 +103,19 @@ namespace SIGHR.Controllers
                 .Where(f => f.UtilizadorId == userId)
                 .Include(f => f.User);
 
-            // ---- CORREÇÃO APLICADA AQUI ----
-            // Não há filtro de data direto nesta action, mas se houver, a lógica seria:
-            // if (filtroData.HasValue) {
-            //     var filtroDataUtc = filtroData.Value.ToUniversalTime();
-            //     query = query.Where(f => f.DataFalta.Date == filtroDataUtc.Date);
-            // }
-            // --------------------------------
+            // Não há filtro de data direto nesta action que precise de conversão UTC.
+            // As datas DataFalta e DataRegisto no ViewModel já virão da BD como UTC e serão apresentadas como tal.
 
             var faltasDoUsuario = await query
                 .OrderByDescending(f => f.DataFalta).ThenBy(f => f.Inicio)
                 .Select(f => new FaltaComUserNameViewModel
                 {
                     Id = f.Id,
-                    DataFalta = f.DataFalta, // Esta data já vem do BD em UTC
+                    DataFalta = f.DataFalta, // Esta data já vem da BD como UTC
                     Inicio = f.Inicio,
                     Fim = f.Fim,
                     Motivo = f.Motivo,
-                    DataRegisto = f.Data, // Esta data já vem do BD em UTC
+                    DataRegisto = f.Data, // Esta data já vem da BD como UTC
                     UserName = f.User != null ? (f.User.NomeCompleto ?? f.User.UserName ?? "N/D") : "N/D"
                 })
                 .ToListAsync();

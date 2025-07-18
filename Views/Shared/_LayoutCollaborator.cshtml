@@ -13,11 +13,18 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
+    <!-- Botão do Hambúrguer (aparece só em mobile) -->
+    <button id="hamburgerButton" class="hamburger-button">☰</button>
+
+    <!-- Overlay para quando o menu estiver aberto (aparece só em mobile) -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
     <!--
         Barra Lateral de Navegação (Sidebar)
         Contém o menu principal para a área do colaborador.
     -->
-    <div class="sidebar">
+    <div class="sidebar" id="mainSidebar">
+        <!-- ADICIONADO id="mainSidebar" -->
         <!-- Título ou logótipo da secção. -->
         <div class="logo">
             <h4>Área do Colaborador</h4>
@@ -36,11 +43,13 @@
                     <a asp-controller="RegistoPonto" asp-action="MeuRegisto">Registo de Ponto</a>
                 </li>
                 <!-- Item de menu para as Faltas. -->
-                <li>
+                <!-- Para Faltas, o 'active' deve ser mais flexível, pois pode ter actions como Registar, MinhasFaltas -->
+                <li class="@(IsControllerActive(ViewContext, "Faltas") ? "active" : "")">
                     <a asp-controller="Faltas" asp-action="MinhasFaltas">As Minhas Faltas</a>
                 </li>
                 <!-- Item de menu para as Encomendas. -->
-                <li class="@(IsRouteActive(ViewContext, "Encomendas", "Registar") ? "active" : "")">
+                <!-- Para Encomendas, o 'active' deve ser mais flexível, pois pode ter actions como Registar, MinhasEncomendas -->
+                <li class="@(IsControllerActive(ViewContext, "Encomendas") ? "active" : "")">
                     <a asp-controller="Encomendas" asp-action="MinhasEncomendas">As Minhas Encomendas</a>
                 </li>
             </ul>
@@ -52,17 +61,22 @@
         </form>
     </div>
 
-   <!--
-        Conteúdo Principal (Main)
-        O método RenderBody é onde o conteúdo específico de cada View
-        do colaborador será injetado.
-    -->
+    <!--
+         Conteúdo Principal (Main)
+         O método RenderBody é onde o conteúdo específico de cada View
+         do colaborador será injetado.
+     -->
     <main>
         @RenderBody()
     </main>
+
+    <!-- Scripts jQuery e Bootstrap -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    
+
+    <!-- Script JavaScript para o menu hambúrguer -->
+    <script src="~/js/layout-scripts.js" asp-append-version="true"></script>
+
     <!-- Secção para que as Views individuais possam injetar os seus próprios scripts JavaScript. -->
     @await RenderSectionAsync("Scripts", required: false)
 </body>
