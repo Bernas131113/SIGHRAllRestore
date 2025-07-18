@@ -164,12 +164,11 @@
 <!-- Estrutura principal do conteúdo da página, encapsulada num contentor branco. -->
 <div class="content">
     <div id="dashboard-area">
-        <!-- Título de boas-vindas ao utilizador. -->
         <h1>Bem-vindo, @(Model.NomeCompleto ?? "Colaborador")!</h1>
 
         <hr class="soft-divider" />
 
-        <!-- Secção de Ações: Botões para o registo de ponto diário. -->
+        <!-- Secção de Ações: Registar Ponto -->
         <div class="ponto-actions-section">
             <h4>Registar Ponto</h4>
             <div class="flex-center mb-3">
@@ -180,7 +179,6 @@
                 <button id="btnEntradaAlmoco" class="btn-custom-style btn-green-custom">Entrada Almoço</button>
                 <button id="btnSaida" class="btn-custom-style btn-red-custom">Saída</button>
             </div>
-            <!-- Área para mostrar mensagens de estado (a processar, sucesso, erro) ao utilizador. -->
             <div id="status-messages-ponto">
                 <div id="loading-message-ponto" style="display: none;">A processar...</div>
                 <div id="success-message-ponto" class="alert alert-success" style="display: none;"></div>
@@ -190,23 +188,51 @@
 
         <hr class="soft-divider" />
 
-        <!-- Secção de Informação: Mostra resumos em formato de 'cards'. -->
+        <!-- Secção de Informação: Cards -->
         <div class="info-cards-section">
             <div class="row">
-                <!-- Card com o resumo do ponto do dia atual. -->
+                <!-- Card: Ponto de Hoje -->
                 <div class="col-md-6">
                     <div class="info-card">
                         <h4>Ponto de Hoje (@DateTime.Today.ToString("dd/MM/yyyy"))</h4>
-                        <div class="ponto-info">
-                            <p><strong>Entrada:</strong> <span id="displayEntrada">@(Model.HorarioDeHoje?.HoraEntrada > TimeSpan.Zero ? Model.HorarioDeHoje.HoraEntrada.ToString(@"hh\:mm") : "--:--")</span></p>
-                            <p><strong>Saída Almoço:</strong> <span id="displaySaidaAlmoco">@(Model.HorarioDeHoje?.SaidaAlmoco > TimeSpan.Zero ? Model.HorarioDeHoje.SaidaAlmoco.ToString(@"hh\:mm") : "--:--")</span></p>
-                            <p><strong>Entrada Almoço:</strong> <span id="displayEntradaAlmoco">@(Model.HorarioDeHoje?.EntradaAlmoco > TimeSpan.Zero ? Model.HorarioDeHoje.EntradaAlmoco.ToString(@"hh\:mm") : "--:--")</span></p>
-                            <p><strong>Saída:</strong> <span id="displaySaida">@(Model.HorarioDeHoje?.HoraSaida > TimeSpan.Zero ? Model.HorarioDeHoje.HoraSaida.ToString(@"hh\:mm") : "--:--")</span></p>
+                        <div class="ponto-info" id="ponto-info-container">
+
+                            <!-- ---- CORREÇÃO CRUCIAL AQUI: A estrutura dos <p> e <span> é sempre renderizada ---- -->
+                            <p>
+                                <strong>Entrada:</strong>
+                                <span id="displayEntrada">
+                                    @(Model.HorarioDeHoje != null && Model.HorarioDeHoje.HoraEntrada.Year > 1 ? Model.HorarioDeHoje.HoraEntrada.ToLocalTime().ToString("HH:mm") : "--:--")
+                                </span>
+                            </p>
+                            <p>
+                                <strong>Saída Almoço:</strong>
+                                <span id="displaySaidaAlmoco">
+                                    @(Model.HorarioDeHoje != null && Model.HorarioDeHoje.SaidaAlmoco.Year > 1 ? Model.HorarioDeHoje.SaidaAlmoco.ToLocalTime().ToString("HH:mm") : "--:--")
+                                </span>
+                            </p>
+                            <p>
+                                <strong>Entrada Almoço:</strong>
+                                <span id="displayEntradaAlmoco">
+                                    @(Model.HorarioDeHoje != null && Model.HorarioDeHoje.EntradaAlmoco.Year > 1 ? Model.HorarioDeHoje.EntradaAlmoco.ToLocalTime().ToString("HH:mm") : "--:--")
+                                </span>
+                            </p>
+                            <p>
+                                <strong>Saída:</strong>
+                                <span id="displaySaida">
+                                    @(Model.HorarioDeHoje != null && Model.HorarioDeHoje.HoraSaida.Year > 1 ? Model.HorarioDeHoje.HoraSaida.ToLocalTime().ToString("HH:mm") : "--:--")
+                                </span>
+                            </p>
+
+                            <!-- Mensagem para quando não há registo, agora controlada por JavaScript -->
+                            <p id="no-record-today-message" style="display: @(Model.HorarioDeHoje == null ? "block" : "none");">
+                                Nenhum registo de ponto para hoje.
+                            </p>
+                            <!-- ----------------------------------------------------------------------------------- -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Card com as últimas faltas registadas pelo utilizador. -->
+                <!-- Card: Minhas Últimas Faltas -->
                 <div class="col-md-6">
                     <div class="info-card">
                         <h4>Minhas Últimas Faltas</h4>
@@ -230,15 +256,12 @@
     </div>
 </div>
 
-<!-- Formulário oculto para gerar o token anti-falsificação, que será usado pelo JavaScript. -->
 <form method="post" style="display:none;">
     @Html.AntiForgeryToken()
 </form>
 
 @section Scripts {
     <script>
-        // Objeto JavaScript que armazena as URLs das actions da API.
-        // Isto permite que o ficheiro JS externo seja reutilizável, sem conter URLs fixas.
         const urls = {
             registarEntrada: '@Url.Action("RegistarEntrada", "RegistoPonto")',
             registarSaidaAlmoco: '@Url.Action("RegistarSaidaAlmoco", "RegistoPonto")',
@@ -247,6 +270,5 @@
             getPontoDoDia: '@Url.Action("GetPontoDoDia", "RegistoPonto")'
         };
     </script>
-    <!-- Carrega o ficheiro JavaScript que contém toda a lógica de interatividade desta página. -->
     <script src="~/js/registoPontoColaborador.js" asp-append-version="true"></script>
 }

@@ -134,11 +134,32 @@
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td>@item.Data.ToString("dd/MM/yyyy")</td>
-                            <td>@(item.HoraEntrada == TimeSpan.Zero ? "--:--" : item.HoraEntrada.ToString(@"hh\:mm"))</td>
-                            <td>@(item.SaidaAlmoco == TimeSpan.Zero ? "--:--" : item.SaidaAlmoco.ToString(@"hh\:mm"))</td>
-                            <td>@(item.EntradaAlmoco == TimeSpan.Zero ? "--:--" : item.EntradaAlmoco.ToString(@"hh\:mm"))</td>
-                            <td>@(item.HoraSaida == TimeSpan.Zero ? "--:--" : item.HoraSaida.ToString(@"hh\:mm"))</td>
+                            <td>@item.Data.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                            <!-- ---- CORREÇÃO APLICADA AQUI: Formato HH:mm (24h) e .ToLocalTime() ---- -->
+                            <td>
+                                @{
+                                    var horaEntrada = item.HoraEntrada.Year == 1 ? "--:--" : item.HoraEntrada.ToLocalTime().ToString("HH:mm");
+                                }
+                                @horaEntrada
+                            </td>
+                            <td>
+                                @{
+                                    var saidaAlmoco = item.SaidaAlmoco.Year == 1 ? "--:--" : item.SaidaAlmoco.ToLocalTime().ToString("HH:mm");
+                                }
+                                @saidaAlmoco
+                            </td>
+                            <td>
+                                @{
+                                    var entradaAlmoco = item.EntradaAlmoco.Year == 1 ? "--:--" : item.EntradaAlmoco.ToLocalTime().ToString("HH:mm");
+                                }
+                                @entradaAlmoco
+                            </td>
+                            <td>
+                                @{
+                                    var horaSaida = item.HoraSaida.Year == 1 ? "--:--" : item.HoraSaida.ToLocalTime().ToString("HH:mm");
+                                }
+                                @horaSaida
+                            </td>
                             <td>@Html.DisplayFor(modelItem => item.TotalHorasTrabalhadas)</td>
                         </tr>
                     }

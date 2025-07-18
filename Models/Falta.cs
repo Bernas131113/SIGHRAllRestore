@@ -2,7 +2,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using SIGHR.Areas.Identity.Data; // Namespace para a classe SIGHRUser
+using SIGHR.Areas.Identity.Data;
 
 namespace SIGHR.Models
 {
@@ -39,16 +39,16 @@ namespace SIGHR.Models
         public DateTime DataFalta { get; set; }
 
         /// <summary>
-        /// A hora de início da ausência.
+        /// A hora de início da ausência (registada em UTC).
         /// </summary>
         [Required(ErrorMessage = "A hora de início é obrigatória.")]
-        public TimeSpan Inicio { get; set; }
+        public DateTime Inicio { get; set; } // <<-- TEM DE SER DateTime AQUI!
 
         /// <summary>
-        /// A hora de fim da ausência.
+        /// A hora de fim da ausência (registada em UTC).
         /// </summary>
         [Required(ErrorMessage = "A hora de fim é obrigatória.")]
-        public TimeSpan Fim { get; set; }
+        public DateTime Fim { get; set; } // <<-- TEM DE SER DateTime AQUI!
 
         /// <summary>
         /// A justificação ou motivo da falta.
