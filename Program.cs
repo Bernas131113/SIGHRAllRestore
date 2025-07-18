@@ -14,15 +14,13 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Linq; // Necessário para .Linq
 
 var builder = WebApplication.CreateBuilder(args);
 
 //
 // Bloco 1: Configuração da Base de Dados
 //
-// A connection string deve ser obtida de forma segura.
-// Em desenvolvimento, pode estar em appsettings.json ou User Secrets.
-// Em produção, DEVE estar em variáveis de ambiente ou Key Vault.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("A connection string 'DefaultConnection' não foi encontrada. Configure-a em appsettings.json, User Secrets, ou variáveis de ambiente.");
 
@@ -61,7 +59,6 @@ builder.Services.AddAuthentication()
    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
    {
        var jwtSettings = builder.Configuration.GetSection("Jwt");
-       // A chave JWT DEVE ser obtida de forma segura (variáveis de ambiente, Key Vault) em produção.
        var jwtKeyString = jwtSettings["Key"] ?? throw new InvalidOperationException("A Chave JWT (Jwt:Key) não foi encontrada. Configure-a.");
        var key = Encoding.UTF8.GetBytes(jwtKeyString);
        options.TokenValidationParameters = new TokenValidationParameters
@@ -111,7 +108,7 @@ builder.Services.AddSwaggerGen(c =>
 
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    if (File.Exists(xmlPath)) // Verifica se o ficheiro XML existe antes de tentar incluí-lo
+    if (File.Exists(xmlPath))
     {
         c.IncludeXmlComments(xmlPath);
     }
@@ -122,8 +119,7 @@ var app = builder.Build();
 //
 // Bloco 6: Pipeline de Middleware HTTP
 //
-// O Swagger UI deve ser exposto APENAS em ambientes de desenvolvimento ou teste/homologação.
-if (app.Environment.IsDevelopment() || app.Environment.IsStaging()) // <<-- Configurado para Staging também
+if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -146,8 +142,6 @@ app.MapControllers();
 
 //
 // Bloco 7: Seeding da Base de Dados (Criação de Dados Iniciais)
-// As seeds devem ser executadas APENAS em ambientes de desenvolvimento ou teste/homologação.
-// EM PRODUÇÃO, o seeding deve ser gerido de forma diferente (ex: migrações de dados, scripts SQL).
 //
 using (var scope = app.Services.CreateScope())
 {
@@ -159,15 +153,16 @@ using (var scope = app.Services.CreateScope())
         var logger = services.GetRequiredService<ILogger<Program>>();
         var configuration = services.GetRequiredService<IConfiguration>();
         var pinHasher = services.GetRequiredService<IPasswordHasher<SIGHRUser>>();
-        var context = services.GetRequiredService<SIGHRContext>(); // Obter o contexto para o SeedMateriais
+        var context = services.GetRequiredService<SIGHRContext>();
 
         // Executar seeding APENAS em desenvolvimento ou ambiente de teste
         if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
         {
             await SeedRolesAsync(roleManager, logger);
             await SeedAdminUserWithHashedPinAsync(userManager, roleManager, pinHasher, logger, configuration);
-            await SeedApiTestUserAsync(userManager, roleManager, logger);
-            await SeedMateriaisAsync(context, logger); // <<< Incluir o seeding de materiais
+            await SeedApiTestUserAsync(userManager, roleManager, logger); // Alterado para otv
+            
+        
         }
         else
         {
@@ -279,13 +274,6 @@ async Task SeedApiTestUserAsync(UserManager<SIGHRUser> userManager, RoleManager<
                 logger.LogInformation("Utilizador '{UserName}' adicionado à função '{RoleName}'.", apiUser.UserName, targetRoleName);
             }
         }
-        else
-        {
-            foreach (var error in result.Errors)
-            {
-                logger.LogError("Erro ao criar o utilizador de teste de API: {ErrorDescription}", error.Description);
-            }
-        }
     }
     else
     {
@@ -305,33 +293,5 @@ async Task SeedApiTestUserAsync(UserManager<SIGHRUser> userManager, RoleManager<
     }
 }
 
-// <summary>
-// Adiciona alguns materiais iniciais à base de dados se ainda não existirem.
-// </summary>
-async Task SeedMateriaisAsync(SIGHRContext context, ILogger<Program> logger)
-{
-    if (!await context.Materiais.AnyAsync())
-    {
-        var materiais = new List<Material>
-        {
-            new Material { Descricao = "Tijolo 7" },
-            new Material { Descricao = "Tijolo 11" },
-            new Material { Descricao = "Tijolo 15" },
-            new Material { Descricao = "Tijolo 22" },
-            new Material { Descricao = "Areia do Rio" },
-            new Material { Descricao = "Areia Amarela" },
-            new Material { Descricao = "Blocos 10" },
-            new Material { Descricao = "Blocos 15" },
-            new Material { Descricao = "Blocos 20" },
-            new Material { Descricao = "Cimento" },
-            new Material { Descricao = "Cal hidráulica" }
-        };
-        await context.Materiais.AddRangeAsync(materiais);
-        await context.SaveChangesAsync();
-        logger.LogInformation("{Count} materiais iniciais adicionados à base de dados.", materiais.Count);
-    }
-    else
-    {
-        logger.LogInformation("Materiais já existem na base de dados, ignorando seeding.");
-    }
-}
+
+
