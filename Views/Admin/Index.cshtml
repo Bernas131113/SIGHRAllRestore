@@ -131,35 +131,17 @@
                         <tr>
                             <td>@Html.DisplayFor(modelItem => item.NomeUtilizador)</td>
                             <td>@item.Data.ToLocalTime().ToString("dd/MM/yyyy")</td>
-                            <!-- ---- CORREÇÃO APLICADA AQUI: Formato HH:mm (24h) e .ToLocalTime() ---- -->
-                            <td>
-                                @{
-                                    var horaEntrada = item.HoraEntrada.Year == 1 ? "--:--" : item.HoraEntrada.ToLocalTime().ToString("HH:mm");
-                                }
-                                @horaEntrada
-                            </td>
-                            <td>
-                                @{
-                                    var saidaAlmoco = item.SaidaAlmoco.Year == 1 ? "--:--" : item.SaidaAlmoco.ToLocalTime().ToString("HH:mm");
-                                }
-                                @saidaAlmoco
-                            </td>
-                            <td>
-                                @{
-                                    var entradaAlmoco = item.EntradaAlmoco.Year == 1 ? "--:--" : item.EntradaAlmoco.ToLocalTime().ToString("HH:mm");
-                                }
-                                @entradaAlmoco
-                            </td>
-                            <td>
-                                @{
-                                    var horaSaida = item.HoraSaida.Year == 1 ? "--:--" : item.HoraSaida.ToLocalTime().ToString("HH:mm");
-                                }
-                                @horaSaida
-                            </td>
+
+                            <!-- ---- CORREÇÃO APLICADA AQUI ---- -->
+                            <td class="utc-time" data-utc-time="@item.HoraEntrada.ToString("o")">--:--</td>
+                            <td class="utc-time" data-utc-time="@item.SaidaAlmoco.ToString("o")">--:--</td>
+                            <td class="utc-time" data-utc-time="@item.EntradaAlmoco.ToString("o")">--:--</td>
+                            <td class="utc-time" data-utc-time="@item.HoraSaida.ToString("o")">--:--</td>
+                            <!-- ----------------------------------- -->
+
                             <td>@Html.DisplayFor(modelItem => item.TotalHorasTrabalhadas)</td>
                             <td class="table-actions-cell">
-                                <a asp-controller="Admin" asp-action="Edit" asp-route-id="@item.HorarioId" class="btn btn-sm btn-warning">Editar</a>
-                                <!-- Poderia ter um botão de Excluir aqui também -->
+                                <a asp-action="Edit" asp-route-id="@item.HorarioId" class="btn btn-sm btn-warning">Editar</a>
                             </td>
                         </tr>
                     }
@@ -183,5 +165,18 @@
             if (params.toString()) url += '?' + params.toString();
             window.location.href = url;
         }
+         document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.utc-time').forEach(cell => {
+                const utcTimeString = cell.getAttribute('data-utc-time');
+                if (utcTimeString && !utcTimeString.startsWith('0001-01-01')) {
+                    const date = new Date(utcTimeString);
+                    cell.textContent = date.toLocaleTimeString('pt-PT', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                }
+            });
+        });
     </script>
 }
