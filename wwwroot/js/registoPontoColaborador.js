@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /**
      * Obtém o token anti-falsificação (anti-forgery) do input oculto na página.
-     * @returns {string} O valor do token ou uma string vazia se não for encontrado.
      */
     function getAntiForgeryToken() {
         const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
@@ -20,31 +19,19 @@ document.addEventListener('DOMContentLoaded', function () {
     //
     // Bloco de Funções de Feedback Visual (Notificações)
     //
-
-    /**
-     * Mostra o indicador de "A processar..." e esconde outras mensagens.
-     */
     function showLoading() {
         if (loadingMsg) loadingMsg.style.display = 'block';
         if (successMsg) successMsg.style.display = 'none';
         if (errorMsg) errorMsg.style.display = 'none';
     }
 
-    /**
-     * Mostra uma notificação (sucesso ou erro) com uma animação de fade.
-     * @param {HTMLElement} element - O elemento da notificação (sucesso ou erro).
-     * @param {string} message - A mensagem a ser exibida.
-     * @param {number} duration - A duração em milissegundos que a mensagem ficará visível.
-     */
     function showNotification(element, message, duration) {
         if (element) {
             element.textContent = message;
             element.style.display = 'block';
-
             window.requestAnimationFrame(() => {
                 element.classList.add('show');
             });
-
             setTimeout(() => {
                 element.classList.remove('show');
                 setTimeout(() => {
@@ -58,14 +45,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showSuccess(message) {
         if (loadingMsg) loadingMsg.style.display = 'none';
-        showNotification(successMsg, message, 5000); // Mostra por 5 segundos.
+        showNotification(successMsg, message, 5000);
     }
 
     function showError(message) {
         if (loadingMsg) loadingMsg.style.display = 'none';
-        showNotification(errorMsg, message, 7000); // Mostra por 7 segundos.
+        showNotification(errorMsg, message, 7000);
     }
-
 
     //
     // Bloco de Comunicação com a API e Atualização da UI
@@ -73,8 +59,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /**
      * Função principal que envia o pedido para registar um ponto (Entrada, Saída, etc.).
-     * @param {string} actionUrl - A URL da API para a ação específica.
-     * @param {string} buttonId - O ID do botão que foi clicado.
      */
     async function registarPonto(actionUrl, buttonId) {
         const button = document.getElementById(buttonId);
@@ -105,7 +89,6 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 showError(data.message || `Erro: Não foi possível concluir a operação.`);
             }
-
         } catch (error) {
             console.error('Erro na requisição de ponto:', error);
             showError('Erro de rede ou ao processar o pedido. Tente novamente.');
@@ -116,18 +99,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /**
      * Função auxiliar para formatar a hora de um objeto Date para HH:MM no fuso horário local e em formato de 24 horas.
-     * @param {string} dateString - A data/hora em formato string ISO 8601 (ex: "2024-01-01T10:00:00Z").
      */
     function formatTimeForDisplay(dateString) {
-        // Verifica se a string é uma data "zero" (MinValue do .NET) ou inválida.
         if (!dateString || dateString.startsWith('0001-01-01')) {
             return '--:--';
         }
         try {
             const date = new Date(dateString);
-
-            // toLocaleTimeString formata para o fuso horário local do utilizador.
-            // hour12: false força o formato de 24 horas.
             return date.toLocaleTimeString('pt-PT', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -147,12 +125,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const displaySaidaAlmoco = document.getElementById('displaySaidaAlmoco');
         const displayEntradaAlmoco = document.getElementById('displayEntradaAlmoco');
         const displaySaida = document.getElementById('displaySaida');
-        const noRecordMsg = document.getElementById('no-record-today-message');
 
-        if (!displayEntrada) {
-            console.error("Elementos de exibição de ponto não encontrados no DOM.");
-            return;
-        }
+        if (!displayEntrada) return;
 
         if (typeof urls === 'undefined' || !urls.getPontoDoDia) {
             console.error("URL 'getPontoDoDia' não está definida.");
@@ -163,20 +137,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const response = await fetch(urls.getPontoDoDia);
             if (response.ok) {
                 const data = await response.json();
-
-                // Atualiza os spans com os valores formatados.
                 displayEntrada.textContent = formatTimeForDisplay(data.horaEntrada);
                 displaySaidaAlmoco.textContent = formatTimeForDisplay(data.saidaAlmoco);
                 displayEntradaAlmoco.textContent = formatTimeForDisplay(data.entradaAlmoco);
                 displaySaida.textContent = formatTimeForDisplay(data.horaSaida);
-
-                // Esconde a mensagem "Nenhum registo" se a entrada foi registada.
-                if (data.horaEntrada && !data.horaEntrada.startsWith('0001-01-01')) {
-                    if (noRecordMsg) noRecordMsg.style.display = 'none';
-                } else {
-                    if (noRecordMsg) noRecordMsg.style.display = 'block';
-                }
-
             } else {
                 console.error("Erro ao obter o ponto do dia:", response.statusText);
             }
@@ -185,9 +149,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    /**
+     * Lê os data-attributes que o Razor renderizou na primeira carga da página e formata as horas.
+     */
+    function initializeDisplayFromHtml() {
+        const displays = [
+            document.getElementById('displayEntrada'),
+            document.getElementById('displaySaidaAlmoco'),
+            document.getElementById('displayEntradaAlmoco'),
+            document.getElementById('displaySaida')
+        ];
+
+        displays.forEach(span => {
+            if (span) {
+                const utcTime = span.getAttribute('data-utc-time');
+                span.textContent = formatTimeForDisplay(utcTime);
+            }
+        });
+    }
+
     //
     // Bloco de Configuração de Eventos
-    // Associa as funções aos cliques dos botões.
     //
     if (typeof urls !== 'undefined') {
         document.getElementById('btnEntrada')?.addEventListener('click', () => registarPonto(urls.registarEntrada, 'btnEntrada'));
@@ -197,4 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
         console.error("Objeto 'urls' não definido. Os eventos de clique não foram configurados.");
     }
+
+    // Execução Inicial
+    initializeDisplayFromHtml();
 });

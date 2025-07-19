@@ -161,7 +161,6 @@
     </style>
 }
 
-<!-- Estrutura principal do conteúdo da página, encapsulada num contentor branco. -->
 <div class="content">
     <div id="dashboard-area">
         <h1>Bem-vindo, @(Model.NomeCompleto ?? "Colaborador")!</h1>
@@ -195,39 +194,12 @@
                 <div class="col-md-6">
                     <div class="info-card">
                         <h4>Ponto de Hoje (@DateTime.Today.ToString("dd/MM/yyyy"))</h4>
-                        <div class="ponto-info" id="ponto-info-container">
-
-                            <!-- ---- CORREÇÃO CRUCIAL AQUI: A estrutura dos <p> e <span> é sempre renderizada ---- -->
-                            <p>
-                                <strong>Entrada:</strong>
-                                <span id="displayEntrada">
-                                    @(Model.HorarioDeHoje != null && Model.HorarioDeHoje.HoraEntrada.Year > 1 ? Model.HorarioDeHoje.HoraEntrada.ToLocalTime().ToString("HH:mm") : "--:--")
-                                </span>
-                            </p>
-                            <p>
-                                <strong>Saída Almoço:</strong>
-                                <span id="displaySaidaAlmoco">
-                                    @(Model.HorarioDeHoje != null && Model.HorarioDeHoje.SaidaAlmoco.Year > 1 ? Model.HorarioDeHoje.SaidaAlmoco.ToLocalTime().ToString("HH:mm") : "--:--")
-                                </span>
-                            </p>
-                            <p>
-                                <strong>Entrada Almoço:</strong>
-                                <span id="displayEntradaAlmoco">
-                                    @(Model.HorarioDeHoje != null && Model.HorarioDeHoje.EntradaAlmoco.Year > 1 ? Model.HorarioDeHoje.EntradaAlmoco.ToLocalTime().ToString("HH:mm") : "--:--")
-                                </span>
-                            </p>
-                            <p>
-                                <strong>Saída:</strong>
-                                <span id="displaySaida">
-                                    @(Model.HorarioDeHoje != null && Model.HorarioDeHoje.HoraSaida.Year > 1 ? Model.HorarioDeHoje.HoraSaida.ToLocalTime().ToString("HH:mm") : "--:--")
-                                </span>
-                            </p>
-
-                            <!-- Mensagem para quando não há registo, agora controlada por JavaScript -->
-                            <p id="no-record-today-message" style="display: @(Model.HorarioDeHoje == null ? "block" : "none");">
-                                Nenhum registo de ponto para hoje.
-                            </p>
-                            <!-- ----------------------------------------------------------------------------------- -->
+                        <div class="ponto-info">
+                            <!-- A estrutura dos <p> e <span> é sempre renderizada com a hora UTC num data-attribute. -->
+                            <p><strong>Entrada:</strong> <span id="displayEntrada" data-utc-time="@(Model.HorarioDeHoje?.HoraEntrada.ToString("o"))">--:--</span></p>
+                            <p><strong>Saída Almoço:</strong> <span id="displaySaidaAlmoco" data-utc-time="@(Model.HorarioDeHoje?.SaidaAlmoco.ToString("o"))">--:--</span></p>
+                            <p><strong>Entrada Almoço:</strong> <span id="displayEntradaAlmoco" data-utc-time="@(Model.HorarioDeHoje?.EntradaAlmoco.ToString("o"))">--:--</span></p>
+                            <p><strong>Saída:</strong> <span id="displaySaida" data-utc-time="@(Model.HorarioDeHoje?.HoraSaida.ToString("o"))">--:--</span></p>
                         </div>
                     </div>
                 </div>
@@ -241,7 +213,7 @@
                             <ul>
                                 @foreach (var falta in Model.UltimasFaltas)
                                 {
-                                    <li>@falta.DataFalta.ToString("dd/MM/yyyy"): @(falta.Motivo ?? "Motivo não especificado")</li>
+                                    <li>@falta.DataFalta.ToLocalTime().ToString("dd/MM/yyyy"): @(falta.Motivo ?? "Motivo não especificado")</li>
                                 }
                             </ul>
                         }
@@ -262,6 +234,7 @@
 
 @section Scripts {
     <script>
+        // Este objeto 'urls' PRECISA de ser definido ANTES de carregar o script que o usa.
         const urls = {
             registarEntrada: '@Url.Action("RegistarEntrada", "RegistoPonto")',
             registarSaidaAlmoco: '@Url.Action("RegistarSaidaAlmoco", "RegistoPonto")',
@@ -270,5 +243,6 @@
             getPontoDoDia: '@Url.Action("GetPontoDoDia", "RegistoPonto")'
         };
     </script>
+    <!-- O script é carregado DEPOIS de o objeto 'urls' estar definido. -->
     <script src="~/js/registoPontoColaborador.js" asp-append-version="true"></script>
 }

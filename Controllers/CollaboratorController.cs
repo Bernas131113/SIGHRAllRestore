@@ -10,7 +10,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using SIGHR.Areas.Identity.Data;
-using System; // Adicionado para DateTime
+using System;
 
 namespace SIGHR.Controllers
 {
@@ -34,23 +34,24 @@ namespace SIGHR.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId)) return Unauthorized("Utilizador não identificado.");
 
-            // ---- CORREÇÃO APLICADA AQUI ----
-            // Converte DateTime.Today para UTC antes de usar na query para evitar erro de fuso horário com PostgreSQL.
-            var hojeUtc = DateTime.Today.ToUniversalTime();
-            // --------------------------------
-
+            // ---- LÓGICA DE CONSULTA SIMPLIFICADA E CORRIGIDA ----
+            // 1. Obter o utilizador e as suas faltas.
             var user = await _context.Users
-                // Compara a data do Horário (que é 'timestamp with time zone' no PostgreSQL) com a data de hoje em UTC.
-                .Include(u => u.Horarios.Where(h => h.Data.Date == hojeUtc.Date))
                 .Include(u => u.Faltas.OrderByDescending(f => f.DataFalta).Take(5))
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null) return NotFound("Utilizador não encontrado.");
 
+            // 2. Obter o registo de ponto de hoje SEPARADAMENTE e de forma explícita.
+            var hojeUtc = DateTime.UtcNow.Date;
+            var horarioDeHoje = await _context.Horarios
+                .FirstOrDefaultAsync(h => h.UtilizadorId == userId && h.Data.Date == hojeUtc);
+            // ----------------------------------------------------
+
             var viewModel = new CollaboratorDashboardViewModel
             {
                 NomeCompleto = user.NomeCompleto ?? user.UserName,
-                HorarioDeHoje = user.Horarios.FirstOrDefault(),
+                HorarioDeHoje = horarioDeHoje, // Atribui o horário encontrado (ou null se não houver)
                 UltimasFaltas = user.Faltas.ToList()
             };
             return View(viewModel);
