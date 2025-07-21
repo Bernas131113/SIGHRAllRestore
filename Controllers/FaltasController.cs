@@ -35,8 +35,8 @@ namespace SIGHR.Controllers
             var model = new FaltaViewModel
             {
                 DataFalta = DateTime.Today,
-                Inicio = DateTime.Today,
-                Fim = DateTime.Today.AddHours(1),
+                Inicio = DateTime.Today.Date.AddHours(9),
+                Fim = DateTime.Today.Date.AddHours(18),
                 Motivo = string.Empty
             };
             return View(model);
@@ -60,15 +60,26 @@ namespace SIGHR.Controllers
                 var currentUser = await _userManager.FindByIdAsync(userId);
                 string userNameForLog = currentUser?.UserName ?? "UtilizadorDesconhecido";
 
+                // ---- CORREÇÃO FINAL E SIMPLIFICADA ----
+                var dataFormulario = model.DataFalta.Date;
+
+                DateTime CombineAndConvertToUtc(DateTime date, DateTime timeFromForm)
+                {
+                    if (timeFromForm.TimeOfDay == TimeSpan.Zero) return DateTime.MinValue.ToUniversalTime();
+                    var dateTimeUnspecified = new DateTime(date.Year, date.Month, date.Day, timeFromForm.Hour, timeFromForm.Minute, timeFromForm.Second);
+                    return dateTimeUnspecified.ToUniversalTime();
+                }
+
                 var falta = new Falta
                 {
                     UtilizadorId = userId,
                     Data = DateTime.UtcNow,
-                    DataFalta = model.DataFalta.ToUniversalTime(),
-                    Inicio = model.Inicio.ToUniversalTime(), // <<-- AGORA ESTÁ CORRETO: DateTime para DateTime
-                    Fim = model.Fim.ToUniversalTime(),       // <<-- AGORA ESTÁ CORRETO: DateTime para DateTime
+                    DataFalta = DateTime.SpecifyKind(dataFormulario, DateTimeKind.Utc),
+                    Inicio = CombineAndConvertToUtc(dataFormulario, model.Inicio),
+                    Fim = CombineAndConvertToUtc(dataFormulario, model.Fim),
                     Motivo = model.Motivo
                 };
+                // ------------------------------------
 
                 _context.Faltas.Add(falta);
                 await _context.SaveChangesAsync();
@@ -97,8 +108,8 @@ namespace SIGHR.Controllers
                 {
                     Id = f.Id,
                     DataFalta = f.DataFalta,
-                    Inicio = f.Inicio, // Agora é DateTime
-                    Fim = f.Fim,       // Agora é DateTime
+                    Inicio = f.Inicio,
+                    Fim = f.Fim,
                     Motivo = f.Motivo,
                     DataRegisto = f.Data,
                     UserName = f.User != null ? (f.User.NomeCompleto ?? f.User.UserName ?? "N/D") : "N/D"

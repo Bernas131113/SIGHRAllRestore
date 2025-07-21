@@ -9,18 +9,15 @@
         /* Estilos específicos para a página Registar Falta */
         /* Esses estilos complementam ou sobrescrevem o que vem do layout e do adminarea.css */
 
-        /* Container principal do formulário dentro da área de conteúdo do layout */
         .faltas-form-card {
             background: white;
-            padding: 30px 40px; /* Mais padding horizontal */
+            padding: 30px 40px;
             border-radius: 12px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 700px; /* Largura máxima do formulário */
-            margin-top: 20px; /* Espaço acima do formulário */
-            /* Se o .main-content-area do layout não centralizar, você pode adicionar: */
-            margin-left: 400px; 
-            /* margin-right: auto; */
+            max-width: 700px;
+            margin: 20px auto; /* Centra o card no meio por defeito (bom para mobile) */
+            /* A MARGEM À ESQUERDA FOI REMOVIDA DAQUI */
         }
 
         .faltas-form-card h1 {
@@ -129,6 +126,26 @@
             border: 1px solid transparent;
             border-radius: .375rem;
             text-align: center;
+        }
+
+        @@media (max-width: 768px) {
+            .faltas-form-card {
+                padding: 20px; /* Reduz o padding em ecrãs pequenos */
+            }
+            /* Faz com que os campos de hora fiquem um em cima do outro */
+            .form-row-halves {
+                flex-direction: column; /* Altera a direção do flex para vertical */
+                gap: 0; /* Remove o espaço entre colunas, pois agora são linhas */
+            }
+
+                .form-row-halves > div {
+                    margin-bottom: 1.25rem; /* Adiciona espaçamento vertical entre os campos */
+                }
+            /* Empilha os botões de ação verticalmente */
+            .btn-group-actions {
+                flex-direction: column;
+                align-items: stretch; /* Faz os botões ocuparem 100% da largura */
+            }
         }
 
     </style>
