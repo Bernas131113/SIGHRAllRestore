@@ -1,18 +1,9 @@
 ﻿// wwwroot/js/adminGestaoFaltas.js
 
-//
-// Bloco de Variáveis Globais
-// Armazenam as URLs da API e os dados carregados para evitar pedidos repetidos.
-//
 let API_URL_ADMIN_FALTAS_LISTAR;
 let API_URL_ADMIN_FALTAS_EXCLUIR;
 let todasAsFaltasAdminCarregadas = [];
 
-/**
- * Função de inicialização, chamada a partir da View.
- * Recebe as URLs da API e configura os eventos de clique dos botões da página.
- * @param {object} urls - Um objeto contendo as URLs 'listar' e 'excluir'.
- */
 function inicializarGestaoFaltasAdmin(urls) {
     API_URL_ADMIN_FALTAS_LISTAR = urls.listar;
     API_URL_ADMIN_FALTAS_EXCLUIR = urls.excluir;
@@ -30,18 +21,11 @@ function inicializarGestaoFaltasAdmin(urls) {
     carregarTodasAsFaltasDaApi();
 }
 
-
-//
-// Bloco de Funções de Formatação de Dados
-// Converte os dados recebidos da API para um formato legível.
-//
-
 /**
  * Formata uma data no formato ISO para "dd/mm/aaaa".
- * @param {string} dataISO - A data em formato ISO (ex: "2023-10-27T00:00:00").
  */
 function formatarDataParaAdmin(dataISO) {
-    if (!dataISO) return 'N/D';
+    if (!dataISO || dataISO.startsWith('0001-01-01')) return 'N/D';
     try {
         const data = new Date(dataISO);
         return data.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -49,28 +33,25 @@ function formatarDataParaAdmin(dataISO) {
 }
 
 /**
- * Formata um TimeSpan C# (ex: "1.08:30:00" ou "08:30:00") para "hh:mm".
- * @param {string} horaTimeSpan - O valor do TimeSpan como string.
+ * Função para formatar a hora de um objeto Date para HH:MM no fuso horário local e em formato de 24 horas.
  */
-function formatarHoraParaAdmin(horaTimeSpan) {
-    if (!horaTimeSpan || horaTimeSpan === "00:00:00") return '--:--';
+function formatarHoraParaAdmin(dateString) {
+    if (!dateString || dateString.startsWith('0001-01-01')) {
+        return '--:--';
+    }
     try {
-        // Remove a parte do dia, se existir (ex: "1.")
-        const partesPrincipais = horaTimeSpan.includes('.') ? horaTimeSpan.split('.')[1] : horaTimeSpan;
-        const partes = partesPrincipais.split(':');
-        return `${partes[0].padStart(2, '0')}:${partes[1].padStart(2, '0')}`;
-    } catch (e) { return 'Hora Inválida'; }
+        const date = new Date(dateString); // A string será ISO 8601 UTC
+        return date.toLocaleTimeString('pt-PT', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    } catch (e) {
+        console.error("Erro ao formatar hora:", dateString, e);
+        return 'Inválido';
+    }
 }
 
-
-//
-// Bloco de Comunicação com a API e Renderização da Tabela
-//
-
-/**
- * Pede os dados das faltas à API, considerando os filtros aplicados,
- * e depois chama a função para desenhar a tabela.
- */
 async function carregarTodasAsFaltasDaApi() {
     const tbody = document.getElementById('tabela-gestao-todas-faltas')?.querySelector('tbody');
     const divNenhuma = document.getElementById('nenhuma-falta-admin-view');
@@ -97,10 +78,6 @@ async function carregarTodasAsFaltasDaApi() {
     }
 }
 
-/**
- * Constrói as linhas da tabela (TRs) com base nos dados recebidos.
- * @param {Array} faltas - O array de objetos de falta vindos da API.
- */
 function renderizarTabelaAdminFaltas(faltas) {
     const tbody = document.getElementById('tabela-gestao-todas-faltas').querySelector('tbody');
     const divNenhuma = document.getElementById('nenhuma-falta-admin-view');
@@ -116,8 +93,11 @@ function renderizarTabelaAdminFaltas(faltas) {
             tr.insertCell().innerHTML = `<input type="checkbox" class="delete-checkbox-row delete-checkbox" value="${falta.faltaId}" onchange="verificarSelecaoParaExcluirFaltasAdmin()">`;
             tr.insertCell().textContent = falta.nomeUtilizador;
             tr.insertCell().textContent = formatarDataParaAdmin(falta.dataFalta);
+
+            // Usa a nova função para formatar a hora de início e fim
             tr.insertCell().textContent = formatarHoraParaAdmin(falta.inicio);
             tr.insertCell().textContent = formatarHoraParaAdmin(falta.fim);
+
             tr.insertCell().textContent = falta.motivo;
             tr.insertCell().textContent = formatarDataParaAdmin(falta.dataRegisto);
         });
@@ -125,10 +105,6 @@ function renderizarTabelaAdminFaltas(faltas) {
     atualizarVisibilidadeCheckboxesAdmin();
 }
 
-
-//
-// Bloco de Funções de Filtro
-//
 
 function aplicarFiltrosFaltasAdmin() {
     carregarTodasAsFaltasDaApi();
@@ -139,12 +115,6 @@ function limparFiltrosFaltasAdmin() {
     document.getElementById('filtro-data-falta').value = '';
     carregarTodasAsFaltasDaApi();
 }
-
-
-//
-// Bloco de Funções para Exclusão em Massa
-// Controla a interface para selecionar e excluir múltiplos registos.
-//
 
 function ativarModoExclusaoFaltasAdmin() {
     document.querySelectorAll('#tabela-gestao-todas-faltas .delete-checkbox').forEach(cb => cb.style.display = 'inline-block');

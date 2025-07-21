@@ -14,7 +14,7 @@ namespace SIGHR.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Policy = "AdminGeneralApiAccess")] // Segurança para toda a API
+    [Authorize(Policy = "AdminGeneralApiAccess")]
     public class FaltasApiController : ControllerBase
     {
         private readonly SIGHRContext _context;
@@ -38,21 +38,34 @@ namespace SIGHR.Controllers.Api
                 _logger.LogInformation("API ListarTodas chamada com filtroNome: {FiltroNome}, filtroData: {FiltroData}", filtroNome, filtroData);
                 IQueryable<Falta> query = _context.Faltas.Include(f => f.User);
 
-                if (!string.IsNullOrEmpty(filtroNome)) query = query.Where(f => f.User != null && ((f.User.UserName != null && f.User.UserName.Contains(filtroNome)) || (f.User.NomeCompleto != null && f.User.NomeCompleto.Contains(filtroNome))));
-                if (filtroData.HasValue) query = query.Where(f => f.DataFalta.Date == filtroData.Value.Date);
+                if (!string.IsNullOrEmpty(filtroNome))
+                {
+                    query = query.Where(f => f.User != null &&
+                                             ((f.User.UserName != null && f.User.UserName.Contains(filtroNome)) ||
+                                              (f.User.NomeCompleto != null && f.User.NomeCompleto.Contains(filtroNome))));
+                }
+                if (filtroData.HasValue)
+                {
+                    var filtroDataUtc = filtroData.Value.ToUniversalTime();
+                    query = query.Where(f => f.DataFalta.Date == filtroDataUtc.Date);
+                }
 
                 var faltas = await query
                     .OrderByDescending(f => f.DataFalta)
                     .ThenBy(f => f.User != null ? f.User.UserName : "")
                     .ThenBy(f => f.Inicio)
-                    .Select(f => new {
+                    .Select(f => new
+                    {
                         faltaId = f.Id,
                         nomeUtilizador = f.User != null ? (f.User.NomeCompleto ?? f.User.UserName ?? "Desconhecido") : "Desconhecido",
-                        dataFalta = f.DataFalta.ToString("yyyy-MM-dd"),
-                        inicio = f.Inicio.ToString(@"hh\:mm\:ss"),
-                        fim = f.Fim.ToString(@"hh\:mm\:ss"),
+
+                        // Devolve as datas e horas no formato ISO 8601 ("o") para o JavaScript
+                        dataFalta = f.DataFalta.ToString("o"),
+                        inicio = f.Inicio.ToString("o"),
+                        fim = f.Fim.ToString("o"),
+                        dataRegisto = f.Data.ToString("o"),
+
                         motivo = f.Motivo,
-                        dataRegisto = f.Data.ToString("yyyy-MM-dd")
                     })
                     .ToListAsync();
                 return Ok(faltas);
@@ -72,14 +85,18 @@ namespace SIGHR.Controllers.Api
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Excluir([FromBody] List<long> idsParaExcluir)
         {
-            if (idsParaExcluir == null || !idsParaExcluir.Any()) return BadRequest(new { message = "Nenhum ID de falta fornecido." });
-
+            if (idsParaExcluir == null || !idsParaExcluir.Any())
+            {
+                return BadRequest(new { message = "Nenhum ID de falta fornecido." });
+            }
             _logger.LogInformation("API Excluir chamada para os IDs: {Ids} pelo utilizador {User}", string.Join(", ", idsParaExcluir), User.Identity?.Name);
             try
             {
                 var faltasParaRemover = await _context.Faltas.Where(f => idsParaExcluir.Contains(f.Id)).ToListAsync();
-                if (!faltasParaRemover.Any()) return NotFound(new { message = "Nenhuma das faltas selecionadas foi encontrada." });
-
+                if (!faltasParaRemover.Any())
+                {
+                    return NotFound(new { message = "Nenhuma das faltas selecionadas foi encontrada." });
+                }
                 _context.Faltas.RemoveRange(faltasParaRemover);
                 await _context.SaveChangesAsync();
                 return Ok(new { message = $"{faltasParaRemover.Count} falta(s) excluída(s) com sucesso." });

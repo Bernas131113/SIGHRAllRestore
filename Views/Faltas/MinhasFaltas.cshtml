@@ -163,11 +163,12 @@
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td>@item.DataFalta.ToString("dd/MM/yyyy")</td>
-                            <td>@item.Inicio.ToString(@"hh\:mm")</td>
-                            <td>@item.Fim.ToString(@"hh\:mm")</td>
+                            <td>@item.DataFalta.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                            <!-- ---- CORREÇÃO APLICADA AQUI: Formato HH:mm (24h) ---- -->
+                            <td>@(item.Inicio.Year == 0 ? "--:--" : item.Inicio.ToLocalTime().ToString("HH:mm"))</td>
+                            <td>@(item.Fim.Year == 0 ? "--:--" : item.Fim.ToLocalTime().ToString("HH:mm"))</td>
                             <td>@Html.DisplayFor(modelItem => item.Motivo)</td>
-                            <td>@item.DataRegisto.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@item.DataRegisto.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                         </tr>
                     }
                 </tbody>
