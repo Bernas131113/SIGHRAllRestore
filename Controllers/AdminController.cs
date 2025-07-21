@@ -146,22 +146,21 @@ namespace SIGHR.Controllers
             var horario = await _context.Horarios.Include(h => h.User).FirstOrDefaultAsync(h => h.Id == id);
             if (horario == null) return NotFound();
 
-            // ---- CORREÇÃO APLICADA AQUI ----
-            // Só converte para ToLocalTime() se a data não for a data "zero" (MinValue).
+            // ---- CORREÇÃO AQUI: Passa os DateTimes em UTC diretamente para o ViewModel ----
+            // O JavaScript na View irá tratar da conversão para a hora local.
             var viewModel = new EditHorarioViewModel
             {
                 Id = horario.Id,
                 NomeUtilizador = horario.User?.NomeCompleto ?? horario.User?.UserName,
-                Data = horario.Data.ToLocalTime(), // A data principal do registo deve ser sempre válida.
-
-                HoraEntrada = horario.HoraEntrada.Year == 1 ? horario.HoraEntrada : horario.HoraEntrada.ToLocalTime(),
-                SaidaAlmoco = horario.SaidaAlmoco.Year == 1 ? horario.SaidaAlmoco : horario.SaidaAlmoco.ToLocalTime(),
-                EntradaAlmoco = horario.EntradaAlmoco.Year == 1 ? horario.EntradaAlmoco : horario.EntradaAlmoco.ToLocalTime(),
-                HoraSaida = horario.HoraSaida.Year == 1 ? horario.HoraSaida : horario.HoraSaida.ToLocalTime()
+                Data = horario.Data, // A data em UTC
+                HoraEntrada = horario.HoraEntrada,
+                SaidaAlmoco = horario.SaidaAlmoco,
+                EntradaAlmoco = horario.EntradaAlmoco,
+                HoraSaida = horario.HoraSaida
             };
-            // ---------------------------------
+            // --------------------------------------------------------------------------
 
-            ViewData["Title"] = $"Editar Registo de {viewModel.Data:dd/MM/yyyy}";
+            ViewData["Title"] = $"Editar Registo de {horario.Data.ToLocalTime():dd/MM/yyyy}";
             return View(viewModel);
         }
 

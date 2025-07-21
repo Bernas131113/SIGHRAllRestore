@@ -67,9 +67,11 @@
 
         <div class="form-group">
             <label asp-for="Data" class="form-label"></label>
-            <input asp-for="Data" type="date" class="form-control" />
+            <!-- O input[type=date] precisa do valor formatado como YYYY-MM-DD na hora local -->
+            <input asp-for="Data" type="date" class="form-control" value="@Model.Data.ToLocalTime().ToString("yyyy-MM-dd")" />
             <span asp-validation-for="Data" class="text-danger"></span>
         </div>
+
         <div class="form-group">
             <label asp-for="HoraEntrada" class="form-label"></label>
             <input asp-for="HoraEntrada" type="time" class="form-control" step="1" />
@@ -92,7 +94,7 @@
         </div>
 
         <div class="btn-group-actions">
-            <button type="submit" class="btn-custom-style btn-green-custom">Guardar Alterações</button>
+            <button type-="submit" class="btn-custom-style btn-green-custom">Guardar Alterações</button>
             <a asp-action="Index" class="btn-custom-style btn-red-custom">Cancelar</a>
         </div>
     </form>
@@ -102,4 +104,31 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            /**
+             * Converte uma string de data UTC do C# (formato "o") para uma string "HH:mm:ss" na hora local.
+             */
+            function formatUtcToLocalTimeInput(utcDateString) {
+                if (!utcDateString || utcDateString.startsWith('0001-01-01')) {
+                    return '';
+                }
+                try {
+                    const date = new Date(utcDateString);
+                    const hours = date.getHours().toString().padStart(2, '0');
+                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                    const seconds = date.getSeconds().toString().padStart(2, '0');
+                    return `${hours}:${minutes}:${seconds}`;
+                } catch (e) {
+                    return '';
+                }
+            }
+
+            // Preenche os valores dos inputs de hora com os dados do Modelo, já convertidos para a hora local.
+            document.getElementById('HoraEntrada').value = formatUtcToLocalTimeInput('@Model.HoraEntrada.ToString("o")');
+            document.getElementById('SaidaAlmoco').value = formatUtcToLocalTimeInput('@Model.SaidaAlmoco.ToString("o")');
+            document.getElementById('EntradaAlmoco').value = formatUtcToLocalTimeInput('@Model.EntradaAlmoco.ToString("o")');
+            document.getElementById('HoraSaida').value = formatUtcToLocalTimeInput('@Model.HoraSaida.ToString("o")');
+        });
+    </script>
 }
