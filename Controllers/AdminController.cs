@@ -103,16 +103,31 @@ namespace SIGHR.Controllers
                 foreach (var item in horariosParaExportar)
                 {
                     worksheet.Cell(currentRow, 1).SetValue(item.NomeUtilizador);
-                    worksheet.Cell(currentRow, 2).SetValue(item.Data.ToLocalTime().ToString("dd/MM/yyyy")); // Data em formato PT
+                    worksheet.Cell(currentRow, 2).SetValue(item.Data.ToLocalTime().ToString("dd/MM/yyyy"));
+
+                    // ---- CORREÇÃO FINAL APLICADA AQUI ----
+                    // Escreve a hora já formatada como TEXTO, garantindo consistência com a UI.
 
                     if (item.HoraEntrada.Year > 1)
                         worksheet.Cell(currentRow, 3).SetValue(item.HoraEntrada.ToLocalTime().ToString("HH:mm"));
+                    else
+                        worksheet.Cell(currentRow, 3).SetValue("--:--");
+
                     if (item.SaidaAlmoco.Year > 1)
                         worksheet.Cell(currentRow, 4).SetValue(item.SaidaAlmoco.ToLocalTime().ToString("HH:mm"));
+                    else
+                        worksheet.Cell(currentRow, 4).SetValue("--:--");
+
                     if (item.EntradaAlmoco.Year > 1)
                         worksheet.Cell(currentRow, 5).SetValue(item.EntradaAlmoco.ToLocalTime().ToString("HH:mm"));
+                    else
+                        worksheet.Cell(currentRow, 5).SetValue("--:--");
+
                     if (item.HoraSaida.Year > 1)
                         worksheet.Cell(currentRow, 6).SetValue(item.HoraSaida.ToLocalTime().ToString("HH:mm"));
+                    else
+                        worksheet.Cell(currentRow, 6).SetValue("--:--");
+                    // ------------------------------------
 
                     TimeSpan totalTrabalhadoExcel = TimeSpan.Zero;
                     if (item.HoraEntrada.Year > 1 && item.HoraSaida.Year > 1)
@@ -122,8 +137,11 @@ namespace SIGHR.Controllers
                         totalTrabalhadoExcel = (item.HoraSaida.TimeOfDay - item.HoraEntrada.TimeOfDay) - tempoAlmocoExcel;
                         if (totalTrabalhadoExcel < TimeSpan.Zero) totalTrabalhadoExcel = TimeSpan.Zero;
                     }
+
                     if (totalTrabalhadoExcel > TimeSpan.Zero)
-                        worksheet.Cell(currentRow, 7).SetValue(totalTrabalhadoExcel); // O Excel formata TimeSpan corretamente
+                        worksheet.Cell(currentRow, 7).SetValue(totalTrabalhadoExcel.ToString(@"hh\:mm"));
+                    else
+                        worksheet.Cell(currentRow, 7).SetValue("00:00");
 
                     currentRow++;
                 }
