@@ -103,29 +103,36 @@ namespace SIGHR.Controllers
                 foreach (var item in horariosParaExportar)
                 {
                     worksheet.Cell(currentRow, 1).SetValue(item.NomeUtilizador);
-                    worksheet.Cell(currentRow, 2).SetValue(item.Data.ToLocalTime()).Style.NumberFormat.Format = "dd/MM/yyyy";
-                    if (item.HoraEntrada != DateTime.MinValue.ToUniversalTime()) worksheet.Cell(currentRow, 3).SetValue(item.HoraEntrada.ToLocalTime()).Style.NumberFormat.Format = "HH:mm";
-                    if (item.SaidaAlmoco != DateTime.MinValue.ToUniversalTime()) worksheet.Cell(currentRow, 4).SetValue(item.SaidaAlmoco.ToLocalTime()).Style.NumberFormat.Format = "HH:mm";
-                    if (item.EntradaAlmoco != DateTime.MinValue.ToUniversalTime()) worksheet.Cell(currentRow, 5).SetValue(item.EntradaAlmoco.ToLocalTime()).Style.NumberFormat.Format = "HH:mm";
-                    if (item.HoraSaida != DateTime.MinValue.ToUniversalTime()) worksheet.Cell(currentRow, 6).SetValue(item.HoraSaida.ToLocalTime()).Style.NumberFormat.Format = "HH:mm";
+                    worksheet.Cell(currentRow, 2).SetValue(item.Data.ToLocalTime().ToString("dd/MM/yyyy")); // Data em formato PT
+
+                    if (item.HoraEntrada.Year > 1)
+                        worksheet.Cell(currentRow, 3).SetValue(item.HoraEntrada.ToLocalTime().ToString("HH:mm"));
+                    if (item.SaidaAlmoco.Year > 1)
+                        worksheet.Cell(currentRow, 4).SetValue(item.SaidaAlmoco.ToLocalTime().ToString("HH:mm"));
+                    if (item.EntradaAlmoco.Year > 1)
+                        worksheet.Cell(currentRow, 5).SetValue(item.EntradaAlmoco.ToLocalTime().ToString("HH:mm"));
+                    if (item.HoraSaida.Year > 1)
+                        worksheet.Cell(currentRow, 6).SetValue(item.HoraSaida.ToLocalTime().ToString("HH:mm"));
+
                     TimeSpan totalTrabalhadoExcel = TimeSpan.Zero;
-                    if (item.HoraEntrada != DateTime.MinValue.ToUniversalTime() && item.HoraSaida != DateTime.MinValue.ToUniversalTime())
+                    if (item.HoraEntrada.Year > 1 && item.HoraSaida.Year > 1)
                     {
                         TimeSpan tempoAlmocoExcel = TimeSpan.Zero;
-                        TimeSpan horaEntradaTsExcel = item.HoraEntrada.TimeOfDay;
-                        TimeSpan saidaAlmocoTsExcel = item.SaidaAlmoco.TimeOfDay;
-                        TimeSpan entradaAlmocoTsExcel = item.EntradaAlmoco.TimeOfDay;
-                        TimeSpan horaSaidaTsExcel = item.HoraSaida.TimeOfDay;
-                        if (entradaAlmocoTsExcel > saidaAlmocoTsExcel && saidaAlmocoTsExcel != TimeSpan.Zero) tempoAlmocoExcel = entradaAlmocoTsExcel - saidaAlmocoTsExcel;
-                        if (horaSaidaTsExcel > horaEntradaTsExcel) { totalTrabalhadoExcel = (horaSaidaTsExcel - horaEntradaTsExcel) - tempoAlmocoExcel; if (totalTrabalhadoExcel < TimeSpan.Zero) totalTrabalhadoExcel = TimeSpan.Zero; }
+                        if (item.EntradaAlmoco > item.SaidaAlmoco) tempoAlmocoExcel = item.EntradaAlmoco.TimeOfDay - item.SaidaAlmoco.TimeOfDay;
+                        totalTrabalhadoExcel = (item.HoraSaida.TimeOfDay - item.HoraEntrada.TimeOfDay) - tempoAlmocoExcel;
+                        if (totalTrabalhadoExcel < TimeSpan.Zero) totalTrabalhadoExcel = TimeSpan.Zero;
                     }
-                    if (totalTrabalhadoExcel > TimeSpan.Zero) worksheet.Cell(currentRow, 7).SetValue(totalTrabalhadoExcel).Style.NumberFormat.Format = "[h]:mm";
+                    if (totalTrabalhadoExcel > TimeSpan.Zero)
+                        worksheet.Cell(currentRow, 7).SetValue(totalTrabalhadoExcel); // O Excel formata TimeSpan corretamente
+
                     currentRow++;
                 }
+
                 for (int i = 1; i <= 7; i++) worksheet.Column(i).AdjustToContents();
                 using (var stream = new MemoryStream()) { workbook.SaveAs(stream); return File(stream.ToArray(), contentType, fileName); }
             }
         }
+
 
         //
         // Bloco: Edição de Registos de Ponto
@@ -171,28 +178,36 @@ namespace SIGHR.Controllers
                     var horarioNaBd = await _context.Horarios.FindAsync(id);
                     if (horarioNaBd == null) return NotFound();
 
-                    // ---- CORREÇÃO APLICADA AQUI ----
-                    // Lógica robusta para combinar data e hora, respeitando valores "zero".
-                    var dataLocal = viewModel.Data.Date; // Apenas a parte da data
+                    // ---- CORREÇÃO FINAL (SIMPLIFICADA) ----
+                    // 1. Obter a data do formulário. O Kind será 'Unspecified'.
+                    var dataFormulario = viewModel.Data;
 
-                    // Função auxiliar para combinar e converter
-                    DateTime CombineAndConvertToUtc(DateTime date, DateTime time)
+                    // 2. Função auxiliar para combinar a data com a hora de forma segura.
+                    DateTime CombineAndConvertToUtc(DateTime date, DateTime timeFromForm)
                     {
-                        // Se a hora do input for MinValue (ex: 00:00:00), guarda MinValue UTC
-                        if (time.TimeOfDay == TimeSpan.Zero)
+                        if (timeFromForm.TimeOfDay == TimeSpan.Zero && timeFromForm.Year == 1)
                         {
                             return DateTime.MinValue.ToUniversalTime();
                         }
-                        // Combina a data local com a hora local e converte para UTC
-                        return date.Add(time.TimeOfDay).ToUniversalTime();
+
+                        // CRUCIAL: Combina a data e a hora do formulário para criar um DateTime LOCAL.
+                        var dateTimeLocal = new DateTime(date.Year, date.Month, date.Day,
+                                                         timeFromForm.Hour, timeFromForm.Minute, timeFromForm.Second,
+                                                         DateTimeKind.Local); // Força o Kind para Local (fuso do servidor)
+
+                        // Converte este novo DateTime local para UTC.
+                        return dateTimeLocal.ToUniversalTime();
                     }
 
-                    horarioNaBd.Data = dataLocal.ToUniversalTime();
-                    horarioNaBd.HoraEntrada = CombineAndConvertToUtc(dataLocal, viewModel.HoraEntrada);
-                    horarioNaBd.SaidaAlmoco = CombineAndConvertToUtc(dataLocal, viewModel.SaidaAlmoco);
-                    horarioNaBd.EntradaAlmoco = CombineAndConvertToUtc(dataLocal, viewModel.EntradaAlmoco);
-                    horarioNaBd.HoraSaida = CombineAndConvertToUtc(dataLocal, viewModel.HoraSaida);
-                    // ---------------------------------
+                    // Atribui a data diretamente, sem conversão de fuso horário.
+                    // O Entity Framework/PostgreSQL vai tratá-la corretamente como uma data UTC `00:00:00`.
+                    horarioNaBd.Data = DateTime.SpecifyKind(dataFormulario.Date, DateTimeKind.Utc); // <<< CORREÇÃO PRINCIPAL AQUI
+
+                    horarioNaBd.HoraEntrada = CombineAndConvertToUtc(dataFormulario, viewModel.HoraEntrada);
+                    horarioNaBd.SaidaAlmoco = CombineAndConvertToUtc(dataFormulario, viewModel.SaidaAlmoco);
+                    horarioNaBd.EntradaAlmoco = CombineAndConvertToUtc(dataFormulario, viewModel.EntradaAlmoco);
+                    horarioNaBd.HoraSaida = CombineAndConvertToUtc(dataFormulario, viewModel.HoraSaida);
+                    // ------------------------------------
 
                     _context.Update(horarioNaBd);
                     await _context.SaveChangesAsync();
