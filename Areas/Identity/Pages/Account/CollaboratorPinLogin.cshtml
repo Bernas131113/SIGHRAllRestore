@@ -1,7 +1,7 @@
 ﻿@page "/Identity/Account/CollaboratorPinLogin"
 @model SIGHR.Areas.Identity.Pages.Account.CollaboratorPinLoginModel
 @{
-    Layout = null; // Layout independente para a página de login.
+    Layout = null;
     ViewData["Title"] = "SIGHR - Área do Colaborador";
 }
 
@@ -18,9 +18,7 @@
     <link rel="manifest" href="/site.webmanifest">
     <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="~/css/login.css" asp-append-version="true">
-
     <style>
-        /* Estilos adicionais para a funcionalidade de login facial */
         .video-container {
             position: relative;
             width: 320px;
@@ -29,7 +27,7 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             overflow: hidden;
-            background: #333; /* Fundo escuro enquanto o vídeo carrega */
+            background: #333;
         }
 
         #faceVideo, #faceOverlay {
@@ -48,7 +46,7 @@
         }
 
         #face-login-container {
-            display: none; /* Inicia oculto */
+            display: none;
             text-align: center;
         }
 
@@ -60,8 +58,7 @@
             margin: 20px 0;
         }
 
-            .divider-text::before,
-            .divider-text::after {
+            .divider-text::before, .divider-text::after {
                 content: '';
                 flex: 1;
                 border-bottom: 1px solid #ddd;
@@ -81,39 +78,28 @@
         <a asp-controller="Home" asp-action="Index">
             <img src="~/images/AllRestore-Logotipo-T180px.png" alt="Logótipo SIGHR" class="logo">
         </a>
-
         <div id="registo-ponto-area">
             <h1>Login do Colaborador</h1>
-
-            <!-- FORMULÁRIO DE LOGIN POR PIN -->
             <form method="post" id="pinLoginForm">
                 <input type="hidden" asp-for="ReturnUrl" />
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
-
                 <div class="form-group">
                     <label asp-for="Input.UserName">Nome de Utilizador</label>
                     <input asp-for="Input.UserName" type="text" class="obra-input" placeholder="O seu nome de utilizador" required />
                     <span asp-validation-for="Input.UserName" class="text-danger"></span>
                 </div>
-
                 <div class="form-group">
                     <label asp-for="Input.PIN"></label>
                     <input asp-for="Input.PIN" type="password" class="obra-input" placeholder="O seu PIN" required maxlength="4" pattern="\d{4}" title="O PIN deve ter 4 números." />
                     <span asp-validation-for="Input.PIN" class="text-danger"></span>
                 </div>
-
                 <div class="flex-center mt-3">
                     <button type="submit" class="btn btn-green">Entrar com PIN</button>
                 </div>
             </form>
-
-            <!-- DIVISÓRIA -->
             <div class="divider-text">ou</div>
-
-            <!-- NOVA SECÇÃO PARA LOGIN FACIAL -->
             <div id="facial-login-section">
                 <button id="btn-face-login-start" class="btn btn-blue" style="width: 100%;">Entrar com Reconhecimento Facial</button>
-
                 <div id="face-login-container">
                     <p>Olhe diretamente para a câmara.</p>
                     <div class="video-container">
@@ -124,15 +110,12 @@
                     <button id="btn-face-login-cancel" class="btn btn-red" style="width: 80%; font-size: 0.9em; padding: 8px;">Cancelar</button>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <!-- SCRIPTS NO FINAL DO BODY -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <partial name="_ValidationScriptsPartial" />
     <script src="~/lib/face-api/face-api.min.js"></script>
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const startBtn = document.getElementById('btn-face-login-start');
@@ -140,50 +123,58 @@
             const faceContainer = document.getElementById('face-login-container');
             const pinLoginForm = document.getElementById('pinLoginForm');
             const videoEl = document.getElementById('faceVideo');
+            const canvasEl = document.getElementById('faceOverlay');
             const statusEl = document.getElementById('faceStatus');
             const divider = document.querySelector('.divider-text');
             const MODEL_URL = '/lib/face-api/models';
 
             let verificationInterval;
             let modelsLoaded = false;
+            let stream = null;
 
-            async function loadModels() {
-                if (modelsLoaded) return true; // Não recarregar se já estiverem na memória
-                statusEl.textContent = 'A carregar modelos de IA...';
+            async function loadModelsOnPageLoad() {
+                startBtn.disabled = true;
+                startBtn.textContent = 'A preparar câmara...';
                 try {
                     await Promise.all([
-                        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
                         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
                     ]);
                     modelsLoaded = true;
-                    return true;
+                    startBtn.disabled = false;
+                    startBtn.textContent = 'Entrar com Reconhecimento Facial';
                 } catch (error) {
-                    console.error("Erro a carregar modelos face-api: ", error);
-                    statusEl.textContent = 'Erro ao carregar modelos.';
-                    return false;
+                    console.error("Erro crítico ao carregar modelos: ", error);
+                    startBtn.textContent = 'Login Facial Indisponível';
+                    statusEl.textContent = 'Erro ao carregar IA. Atualize a página.';
                 }
             }
+
+            loadModelsOnPageLoad();
 
             async function startVideo() {
                 statusEl.textContent = 'A iniciar câmara...';
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     videoEl.srcObject = stream;
-                    return new Promise(resolve => videoEl.onloadedmetadata = resolve(true));
+                    return new Promise(resolve => videoEl.onplaying = () => {
+                        const displaySize = { width: videoEl.clientWidth, height: videoEl.clientHeight };
+                        faceapi.matchDimensions(canvasEl, displaySize);
+                        resolve(true);
+                    });
                 } catch (e) {
-                     statusEl.textContent = 'Câmara não autorizada ou não encontrada.';
-                     console.error("Erro na câmara: ", e);
-                     return false;
+                    statusEl.textContent = 'Câmara não autorizada ou não encontrada.';
+                    console.error("Erro na câmara: ", e);
+                    return false;
                 }
             }
 
             function stopVideoAndVerification() {
                 clearInterval(verificationInterval);
-                const stream = videoEl.srcObject;
                 if (stream) {
                     stream.getTracks().forEach(track => track.stop());
-                    videoEl.srcObject = null;
+                    stream = null;
                 }
                 faceContainer.style.display = 'none';
                 pinLoginForm.style.display = 'block';
@@ -191,12 +182,23 @@
                 startBtn.style.display = 'block';
             }
 
-            async function verifyFace() {
-                const detection = await faceapi.detectSingleFace(videoEl, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+            async function runVerificationCycle() {
+                if (videoEl.paused || videoEl.ended || !modelsLoaded) {
+                    return;
+                }
+
+                const displaySize = { width: videoEl.clientWidth, height: videoEl.clientHeight };
+                faceapi.matchDimensions(canvasEl, displaySize);
+                const ctx = canvasEl.getContext('2d');
+                ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+
+                const detection = await faceapi.detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
                     .withFaceLandmarks().withFaceDescriptor();
 
                 if (detection) {
+                    faceapi.draw.drawDetections(canvasEl, faceapi.resizeResults(detection, displaySize));
                     statusEl.textContent = "Rosto detetado. A verificar...";
+
                     const descriptor = detection.descriptor;
                     const descriptorBytes = new Uint8Array(descriptor.buffer);
                     const base64String = btoa(String.fromCharCode.apply(null, descriptorBytes));
@@ -207,9 +209,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ liveFaceDescriptorBase64: base64String })
                         });
-
                         const data = await response.json();
-
                         if (response.ok && data.success) {
                             statusEl.textContent = "Login bem-sucedido! A redirecionar...";
                             clearInterval(verificationInterval);
@@ -218,8 +218,7 @@
                             statusEl.textContent = "Rosto não reconhecido. Tente novamente.";
                         }
                     } catch (err) {
-                        console.error("Erro na verificação da API: ", err);
-                        statusEl.textContent = "Erro de comunicação. Tente novamente.";
+                        statusEl.textContent = "Erro de comunicação. Verifique a consola.";
                     }
                 } else {
                     statusEl.textContent = "À procura de um rosto...";
@@ -228,16 +227,16 @@
 
             if (startBtn) {
                 startBtn.addEventListener('click', async () => {
+                    if (!modelsLoaded) { alert("Os modelos de IA ainda estão a carregar."); return; }
+
                     pinLoginForm.style.display = 'none';
                     startBtn.style.display = 'none';
                     divider.style.display = 'none';
                     faceContainer.style.display = 'block';
 
-                    if (await loadModels() && await startVideo()) {
-                        statusEl.textContent = "À procura de um rosto...";
-                        verificationInterval = setInterval(verifyFace, 2500);
+                    if (await startVideo()) {
+                        verificationInterval = setInterval(runVerificationCycle, 1500);
                     } else {
-                        // Se falhar, reverte para a vista de PIN
                         stopVideoAndVerification();
                     }
                 });
