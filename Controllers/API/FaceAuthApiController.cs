@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,6 @@ using SIGHR.Areas.Identity.Data;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication; // <<< ADICIONA ESTE USING NO TOPO
 
 namespace SIGHR.Controllers.Api
 {
@@ -26,7 +26,6 @@ namespace SIGHR.Controllers.Api
             _signInManager = signInManager;
         }
 
-        // --- Nenhumas alterações nos métodos de Register e Delete ---
         [HttpPost("register")]
         [Authorize(Policy = "CollaboratorAccessUI")]
         [ValidateAntiForgeryToken]
@@ -56,6 +55,7 @@ namespace SIGHR.Controllers.Api
             if (result.Succeeded) return Ok(new { message = "Perfil facial apagado com sucesso!" });
             return BadRequest(new { message = "Erro ao apagar o perfil facial." });
         }
+
         [HttpPost("verify")]
         [AllowAnonymous]
         public async Task<IActionResult> VerifyAndLogin([FromBody] FaceVerificationRequest request)
@@ -74,35 +74,32 @@ namespace SIGHR.Controllers.Api
 
             const double faceDistanceThreshold = 0.5;
 
-            // ============== CORREÇÃO PRINCIPAL ===================
-            // A consulta agora procura qualquer utilizador (Admin ou Collaborator)
-            // que tenha um perfil facial registado.
+            // OTIMIZAÇÃO: Selecionar apenas os dados necessários da base de dados.
             var usersWithProfiles = await _userManager.Users
                 .Where(u => u.FacialProfile != null && u.FacialProfile.Length == 512)
+                .Select(u => new { u.Id, u.UserName, u.Tipo, u.FacialProfile }) // Projeta apenas os dados essenciais
                 .ToListAsync();
 
             Console.WriteLine($"[DEBUG] Perfis faciais válidos na BD: {usersWithProfiles.Count}");
 
-            foreach (var user in usersWithProfiles)
+            foreach (var userProjection in usersWithProfiles)
             {
-                var storedDescriptor = ToFloatArray(user.FacialProfile!);
+                var storedDescriptor = ToFloatArray(userProjection.FacialProfile!);
                 var distance = CalculateEuclideanDistance(liveDescriptor, storedDescriptor);
 
-                Console.WriteLine($"[DEBUG] Verificando Rosto... Utilizador: {user.UserName} (Tipo: {user.Tipo}), Distância: {distance:F4}");
+                Console.WriteLine($"[DEBUG] Verificando... Utilizador: {userProjection.UserName}, Distância: {distance:F4}");
 
                 if (distance < faceDistanceThreshold)
                 {
-                    // ===== LÓGICA DE LOGIN AJUSTADA =====
-                    // FORÇAMOS O LOGIN USANDO O ESQUEMA DE COOKIE DE COLABORADOR,
-                    // independentemente do tipo real do utilizador (Admin ou Collaborator).
-                    // Isto garante que, após este login, o utilizador será tratado
-                    // como um colaborador para fins de navegação.
+                    // Correspondência encontrada! Agora, busca o objeto completo do utilizador para fazer o login.
+                    var userToLogin = await _userManager.FindByIdAsync(userProjection.Id);
+                    if (userToLogin == null) continue; // Segurança extra caso o user seja apagado durante o processo
+
                     const string authenticationScheme = "CollaboratorLoginScheme";
 
-                    var principal = await _signInManager.CreateUserPrincipalAsync(user);
+                    var principal = await _signInManager.CreateUserPrincipalAsync(userToLogin);
                     await HttpContext.SignInAsync(authenticationScheme, principal, new AuthenticationProperties { IsPersistent = true });
 
-                    // A URL de redirecionamento é SEMPRE para o dashboard do colaborador.
                     string redirectUrl = Url.Action("Dashboard", "Collaborator") ?? "/";
 
                     return Ok(new { success = true, redirectUrl });
