@@ -1,0 +1,206 @@
+﻿@{
+    ViewData["Title"] = "A Minha Conta";
+    Layout = "_LayoutCollaborator";
+}
+
+@section Styles {
+    <style>
+        .video-container {
+            position: relative;
+            width: 400px;
+            height: 300px;
+            margin: 10px auto;
+            border: 2px solid #ccc;
+            background: #000;
+        }
+
+        #video, #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #status-registo {
+            font-weight: bold;
+            min-height: 22px;
+        }
+    </style>
+}
+
+<div class="content">
+    <div class="header">
+        <h2>@ViewData["Title"]</h2>
+    </div>
+    <hr />
+    <p>Aqui pode gerir as suas definições de conta, incluindo o acesso por reconhecimento facial.</p>
+
+    <h4>Registo Facial</h4>
+
+    @if (ViewData["TemPerfilFacial"] as bool? ?? false)
+    {
+        <p class="text-success">Já tem um perfil facial registado.</p>
+        <button id="btn-apagar-rosto" class="btn-custom-style btn-red-custom">Apagar Registo Facial</button>
+    }
+    else
+    {
+        <p>Ainda não tem um perfil facial. Para o criar, clique abaixo.</p>
+        <button id="btn-iniciar-registo" class="btn-custom-style btn-green-custom">Registar o Meu Rosto</button>
+    }
+
+    <!-- Elementos para a captura de vídeo (inicialmente ocultos) -->
+    <div id="registo-container" style="display:none; text-align:center;">
+        <p>Posicione o seu rosto no centro da câmara e aguarde.</p>
+        <div class="video-container">
+            <video id="video" autoplay muted></video>
+            <canvas id="overlay"></canvas>
+        </div>
+        <p id="status-registo">A iniciar câmara...</p>
+        <button id="btn-cancelar-registo" class="btn-custom-style btn-red-custom">Cancelar</button>
+    </div>
+</div>
+
+<form style="display: none;">
+    @Html.AntiForgeryToken()
+</form>
+
+@section Scripts {
+    <script src="~/lib/face-api/face-api.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const btnIniciarRegisto = document.getElementById('btn-iniciar-registo');
+            const btnCancelarRegisto = document.getElementById('btn-cancelar-registo');
+            const btnApagarRosto = document.getElementById('btn-apagar-rosto');
+            const registoContainer = document.getElementById('registo-container');
+            const video = document.getElementById('video');
+            const statusEl = document.getElementById('status-registo');
+            const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            let videoStream;
+            const MODEL_URL = '/lib/face-api/models';
+
+            async function loadModels() {
+                statusEl.textContent = 'A carregar modelos...';
+                try {
+                    await Promise.all([
+                        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                    ]);
+                    statusEl.textContent = 'Modelos carregados. A iniciar câmara...';
+                    return true;
+                } catch (error) {
+                    console.error("Erro a carregar modelos da face-api", error);
+                    statusEl.textContent = 'Erro ao carregar os modelos de IA.';
+                    return false;
+                }
+            }
+
+            async function startVideo() {
+                 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    try {
+                        videoStream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                        video.srcObject = videoStream;
+                        return new Promise(resolve => video.onloadedmetadata = resolve);
+                    } catch(error) {
+                         statusEl.textContent = 'Erro: Não foi possível aceder à câmara.';
+                         console.error("Erro ao aceder à câmara: ", error);
+                    }
+                 } else {
+                     statusEl.textContent = 'Este browser não suporta acesso à câmara.';
+                 }
+            }
+
+            function stopVideo() {
+                if (videoStream) {
+                    videoStream.getTracks().forEach(track => track.stop());
+                    videoStream = null;
+                    registoContainer.style.display = 'none';
+                    if (btnIniciarRegisto) btnIniciarRegisto.style.display = 'inline-block';
+                }
+            }
+
+            async function captureAndRegisterFace() {
+                statusEl.textContent = "Olhe para a câmara...";
+
+                const detection = await faceapi.detectSingleFace(video)
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+
+                if (detection) {
+                    statusEl.textContent = 'Rosto detetado! A registar...';
+                    const descriptor = detection.descriptor;
+
+                    const profileBytes = new Uint8Array(descriptor.buffer);
+
+                    const binaryString = String.fromCharCode.apply(null, profileBytes);
+                    const base64String = btoa(binaryString);
+
+                    try {
+                        const response = await fetch('/api/face-auth/register', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': antiForgeryToken
+                            },
+                            body: JSON.stringify({ facialProfileBase64: base64String })
+                        });
+
+                        if (response.ok) {
+                            alert("Rosto registado com sucesso!");
+                            window.location.reload();
+                        } else {
+                            const error = await response.json().catch(() => ({ message: response.statusText }));
+                            alert(`Erro ao registar: ${error.message}`);
+                            stopVideo();
+                        }
+                    } catch(e) {
+                         console.error("Erro no fetch: ", e);
+                         alert("Erro de comunicação ao registar o rosto.");
+                         stopVideo();
+                    }
+                } else {
+                    statusEl.textContent = 'Nenhum rosto detetado. Posicione-se melhor e tente novamente.';
+                    setTimeout(captureAndRegisterFace, 2500);
+                }
+            }
+
+            if (btnIniciarRegisto) {
+                btnIniciarRegisto.addEventListener('click', async () => {
+                    btnIniciarRegisto.style.display = 'none';
+                    registoContainer.style.display = 'block';
+                    if (await loadModels()) {
+                        await startVideo();
+                        setTimeout(captureAndRegisterFace, 1000);
+                    }
+                });
+            }
+
+            if (btnCancelarRegisto) {
+                btnCancelarRegisto.addEventListener('click', stopVideo);
+            }
+
+            if (btnApagarRosto) {
+                btnApagarRosto.addEventListener('click', async () => {
+                    if (!confirm("Tem a certeza que quer apagar o seu registo facial?")) return;
+                    try {
+                        const response = await fetch('/api/face-auth/delete', {
+                            method: 'POST',
+                            headers: { 'RequestVerificationToken': antiForgeryToken }
+                        });
+                         if (response.ok) {
+                            alert("Registo facial apagado com sucesso!");
+                            window.location.reload();
+                        } else {
+                            const error = await response.json().catch(() => ({ message: response.statusText }));
+                            alert(`Erro ao apagar: ${error.message}`);
+                        }
+                    } catch(e) {
+                        alert('Erro de comunicação ao apagar o registo.');
+                    }
+                });
+            }
+        });
+    </script>
+}

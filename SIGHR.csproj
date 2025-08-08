@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Emgu.CV" Version="4.11.0.5746" />
+    <PackageReference Include="Emgu.CV.runtime.windows" Version="4.11.0.5746" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.*" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.11" />
@@ -38,6 +40,10 @@
 <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.1" />
 <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.1" />
   
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\lib\face-api\models\" />
   </ItemGroup>
 
 </Project>
