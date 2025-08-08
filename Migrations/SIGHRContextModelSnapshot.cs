@@ -177,6 +177,9 @@ namespace SIGHR.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<byte[]>("FacialProfile")
+                        .HasColumnType("bytea");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 

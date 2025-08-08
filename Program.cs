@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SIGHR.Areas.Identity.Data;
-using SIGHR.Models; // Necessário para a classe Material e outras entidades no seeding
+using SIGHR.Models;
 using SIGHR.Services;
 using System;
 using System.Collections.Generic;
@@ -14,9 +14,10 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.StaticFiles; // <<< ADICIONADO AQUI
 using Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime;
 using NodaTime;
-using System.Linq; // Necessário para .Linq
+using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -133,7 +134,15 @@ else
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ServeUnknownFileTypes = true,
+    DefaultContentType = "application/octet-stream"
+});
+// ------------------------------------
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -163,8 +172,6 @@ using (var scope = app.Services.CreateScope())
             await SeedRolesAsync(roleManager, logger);
             await SeedAdminUserWithHashedPinAsync(userManager, roleManager, pinHasher, logger, configuration);
             await SeedApiTestUserAsync(userManager, roleManager, logger); // Alterado para otv
-            
-        
         }
         else
         {
@@ -294,6 +301,3 @@ async Task SeedApiTestUserAsync(UserManager<SIGHRUser> userManager, RoleManager<
         }
     }
 }
-
-
-

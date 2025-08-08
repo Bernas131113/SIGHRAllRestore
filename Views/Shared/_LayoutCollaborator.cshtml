@@ -58,6 +58,9 @@
                 <li class="@(IsControllerActive(ViewContext, "Encomendas") ? "active" : "")">
                     <a asp-controller="Encomendas" asp-action="MinhasEncomendas">As Minhas Encomendas</a>
                 </li>
+                <li class="@(IsRouteActive(ViewContext, "Collaborator", "MinhaConta") ? "active" : "")">
+                    <a asp-controller="Collaborator" asp-action="MinhaConta">A Minha Conta</a>
+                </li>
             </ul>
         </nav>
 

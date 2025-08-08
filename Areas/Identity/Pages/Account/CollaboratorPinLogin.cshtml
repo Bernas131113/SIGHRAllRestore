@@ -1,7 +1,7 @@
 ﻿@page "/Identity/Account/CollaboratorPinLogin"
 @model SIGHR.Areas.Identity.Pages.Account.CollaboratorPinLoginModel
 @{
-    Layout = null; // Esta página não usará o layout padrão para ter um design independente.
+    Layout = null; // Layout independente para a página de login.
     ViewData["Title"] = "SIGHR - Área do Colaborador";
 }
 
@@ -12,57 +12,241 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"]</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png"> <!-- <<< CORRIGIDO -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg"> <!-- <<< CORRIGIDO -->
-    <link rel="icon" href="/favicon.ico"> <!-- <<< Fallback para browsers antigos -->
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" href="/favicon.ico">
     <link rel="manifest" href="/site.webmanifest">
     <meta name="theme-color" content="#ffffff">
-    <!-- Carrega a folha de estilos específica para a página de login. -->
     <link rel="stylesheet" href="~/css/login.css" asp-append-version="true">
+
+    <style>
+        /* Estilos adicionais para a funcionalidade de login facial */
+        .video-container {
+            position: relative;
+            width: 320px;
+            height: 240px;
+            margin: 15px auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #333; /* Fundo escuro enquanto o vídeo carrega */
+        }
+
+        #faceVideo, #faceOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #faceStatus {
+            min-height: 24px;
+            font-weight: 500;
+            color: #333;
+            margin-top: 10px;
+        }
+
+        #face-login-container {
+            display: none; /* Inicia oculto */
+            text-align: center;
+        }
+
+        .divider-text {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #aaa;
+            margin: 20px 0;
+        }
+
+            .divider-text::before,
+            .divider-text::after {
+                content: '';
+                flex: 1;
+                border-bottom: 1px solid #ddd;
+            }
+
+            .divider-text:not(:empty)::before {
+                margin-right: .5em;
+            }
+
+            .divider-text:not(:empty)::after {
+                margin-left: .5em;
+            }
+    </style>
 </head>
 <body>
-    <!-- Contentor principal que centraliza o formulário na página. -->
     <div class="container">
-
-        <!-- Logótipo da empresa, com um link para a página inicial. -->
         <a asp-controller="Home" asp-action="Index">
             <img src="~/images/AllRestore-Logotipo-T180px.png" alt="Logótipo SIGHR" class="logo">
         </a>
 
-        <!-- Área que contém o formulário de login. -->
         <div id="registo-ponto-area">
             <h1>Login do Colaborador</h1>
 
-            <!-- Formulário de submissão dos dados de login. -->
-            <form method="post">
-                <!-- Campo oculto para guardar a URL de retorno após o login bem-sucedido. -->
+            <!-- FORMULÁRIO DE LOGIN POR PIN -->
+            <form method="post" id="pinLoginForm">
                 <input type="hidden" asp-for="ReturnUrl" />
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
-                <!-- Mostra um sumário de erros de validação do modelo, se existirem. -->
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-                <!-- Campo para o nome de utilizador. -->
                 <div class="form-group">
                     <label asp-for="Input.UserName">Nome de Utilizador</label>
                     <input asp-for="Input.UserName" type="text" class="obra-input" placeholder="O seu nome de utilizador" required />
                     <span asp-validation-for="Input.UserName" class="text-danger"></span>
                 </div>
 
-                <!-- Campo para a password (PIN). -->
                 <div class="form-group">
                     <label asp-for="Input.PIN"></label>
                     <input asp-for="Input.PIN" type="password" class="obra-input" placeholder="O seu PIN" required maxlength="4" pattern="\d{4}" title="O PIN deve ter 4 números." />
                     <span asp-validation-for="Input.PIN" class="text-danger"></span>
                 </div>
 
-                <!-- Contentor para o botão de submissão, para facilitar a centralização. -->
                 <div class="flex-center mt-3">
-                    <button type="submit" class="btn btn-green">Entrar</button>
+                    <button type="submit" class="btn btn-green">Entrar com PIN</button>
                 </div>
             </form>
+
+            <!-- DIVISÓRIA -->
+            <div class="divider-text">ou</div>
+
+            <!-- NOVA SECÇÃO PARA LOGIN FACIAL -->
+            <div id="facial-login-section">
+                <button id="btn-face-login-start" class="btn btn-blue" style="width: 100%;">Entrar com Reconhecimento Facial</button>
+
+                <div id="face-login-container">
+                    <p>Olhe diretamente para a câmara.</p>
+                    <div class="video-container">
+                        <video id="faceVideo" autoplay muted playsinline></video>
+                        <canvas id="faceOverlay"></canvas>
+                    </div>
+                    <p id="faceStatus">A carregar...</p>
+                    <button id="btn-face-login-cancel" class="btn btn-red" style="width: 80%; font-size: 0.9em; padding: 8px;">Cancelar</button>
+                </div>
+            </div>
+
         </div>
     </div>
 
+    <!-- SCRIPTS NO FINAL DO BODY -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/lib/face-api/face-api.min.js"></script>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startBtn = document.getElementById('btn-face-login-start');
+            const cancelBtn = document.getElementById('btn-face-login-cancel');
+            const faceContainer = document.getElementById('face-login-container');
+            const pinLoginForm = document.getElementById('pinLoginForm');
+            const videoEl = document.getElementById('faceVideo');
+            const statusEl = document.getElementById('faceStatus');
+            const divider = document.querySelector('.divider-text');
+            const MODEL_URL = '/lib/face-api/models';
+
+            let verificationInterval;
+            let modelsLoaded = false;
+
+            async function loadModels() {
+                if (modelsLoaded) return true; // Não recarregar se já estiverem na memória
+                statusEl.textContent = 'A carregar modelos de IA...';
+                try {
+                    await Promise.all([
+                        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                    ]);
+                    modelsLoaded = true;
+                    return true;
+                } catch (error) {
+                    console.error("Erro a carregar modelos face-api: ", error);
+                    statusEl.textContent = 'Erro ao carregar modelos.';
+                    return false;
+                }
+            }
+
+            async function startVideo() {
+                statusEl.textContent = 'A iniciar câmara...';
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    videoEl.srcObject = stream;
+                    return new Promise(resolve => videoEl.onloadedmetadata = resolve(true));
+                } catch (e) {
+                     statusEl.textContent = 'Câmara não autorizada ou não encontrada.';
+                     console.error("Erro na câmara: ", e);
+                     return false;
+                }
+            }
+
+            function stopVideoAndVerification() {
+                clearInterval(verificationInterval);
+                const stream = videoEl.srcObject;
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    videoEl.srcObject = null;
+                }
+                faceContainer.style.display = 'none';
+                pinLoginForm.style.display = 'block';
+                divider.style.display = 'flex';
+                startBtn.style.display = 'block';
+            }
+
+            async function verifyFace() {
+                const detection = await faceapi.detectSingleFace(videoEl, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+                    .withFaceLandmarks().withFaceDescriptor();
+
+                if (detection) {
+                    statusEl.textContent = "Rosto detetado. A verificar...";
+                    const descriptor = detection.descriptor;
+                    const descriptorBytes = new Uint8Array(descriptor.buffer);
+                    const base64String = btoa(String.fromCharCode.apply(null, descriptorBytes));
+
+                    try {
+                        const response = await fetch('/api/face-auth/verify', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ liveFaceDescriptorBase64: base64String })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            statusEl.textContent = "Login bem-sucedido! A redirecionar...";
+                            clearInterval(verificationInterval);
+                            window.location.href = data.redirectUrl;
+                        } else {
+                            statusEl.textContent = "Rosto não reconhecido. Tente novamente.";
+                        }
+                    } catch (err) {
+                        console.error("Erro na verificação da API: ", err);
+                        statusEl.textContent = "Erro de comunicação. Tente novamente.";
+                    }
+                } else {
+                    statusEl.textContent = "À procura de um rosto...";
+                }
+            }
+
+            if (startBtn) {
+                startBtn.addEventListener('click', async () => {
+                    pinLoginForm.style.display = 'none';
+                    startBtn.style.display = 'none';
+                    divider.style.display = 'none';
+                    faceContainer.style.display = 'block';
+
+                    if (await loadModels() && await startVideo()) {
+                        statusEl.textContent = "À procura de um rosto...";
+                        verificationInterval = setInterval(verifyFace, 2500);
+                    } else {
+                        // Se falhar, reverte para a vista de PIN
+                        stopVideoAndVerification();
+                    }
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', stopVideoAndVerification);
+            }
+        });
+    </script>
 </body>
 </html>

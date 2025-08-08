@@ -64,5 +64,15 @@ namespace SIGHR.Controllers
             await HttpContext.SignOutAsync("CollaboratorLoginScheme");
             return RedirectToPage("/Account/CollaboratorPinLogin", new { area = "Identity" });
         }
+
+        [HttpGet]
+        public async Task<IActionResult> MinhaConta()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound("Utilizador não encontrado.");
+
+            ViewData["TemPerfilFacial"] = user.FacialProfile != null && user.FacialProfile.Length > 0;
+            return View();
+        }
     }
 }
