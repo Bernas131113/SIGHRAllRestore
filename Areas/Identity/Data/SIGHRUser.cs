@@ -1,4 +1,5 @@
 ﻿// Em: Areas/Identity/Data/SIGHRUser.cs
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Microsoft.AspNetCore.Identity;
 using SIGHR.Models;
 using System.Collections.Generic;
@@ -19,10 +20,14 @@ namespace SIGHR.Areas.Identity.Data
         [Column(TypeName = "bytea")] // Tipo específico para PostgreSQL, otimizado para byte array
         public byte[]? FacialProfile { get; set; }
 
+        public int DiasFeriasDisponiveis { get; set; } = 24;
 
         // Propriedades de Navegação
         public virtual ICollection<Horario> Horarios { get; set; } = new List<Horario>();
         public virtual ICollection<Falta> Faltas { get; set; } = new List<Falta>();
         public virtual ICollection<Encomenda> Encomendas { get; set; } = new List<Encomenda>();
+        public virtual ICollection<Ferias> Ferias { get; set; } = new List<Ferias>();
+
+        public bool IsActiveEmployee { get; set; } = true;
     }
 }

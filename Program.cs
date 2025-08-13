@@ -14,7 +14,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.StaticFiles; // <<< ADICIONADO AQUI
+using Microsoft.AspNetCore.StaticFiles;
 using Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime;
 using NodaTime;
 using System.Linq;
@@ -25,10 +25,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Bloco 1: Configuração da Base de Dados
 //
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("A connection string 'DefaultConnection' não foi encontrada. Configure-a em appsettings.json, User Secrets, ou variáveis de ambiente.");
-
-builder.Services.AddDbContext<SIGHRContext>(options =>
-    options.UseNpgsql(connectionString)); // Usar Npgsql para PostgreSQL
+    ?? throw new InvalidOperationException("A connection string 'DefaultConnection' não foi encontrada.");
+builder.Services.AddDbContext<SIGHRContext>(options => options.UseNpgsql(connectionString));
 
 //
 // Bloco 2: Configuração do ASP.NET Core Identity
@@ -62,7 +60,7 @@ builder.Services.AddAuthentication()
    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
    {
        var jwtSettings = builder.Configuration.GetSection("Jwt");
-       var jwtKeyString = jwtSettings["Key"] ?? throw new InvalidOperationException("A Chave JWT (Jwt:Key) não foi encontrada. Configure-a.");
+       var jwtKeyString = jwtSettings["Key"] ?? throw new InvalidOperationException("A Chave JWT (Jwt:Key) não foi encontrada.");
        var key = Encoding.UTF8.GetBytes(jwtKeyString);
        options.TokenValidationParameters = new TokenValidationParameters
        {
@@ -78,28 +76,31 @@ builder.Services.AddAuthentication()
    });
 
 //
-// Bloco 4: Configuração da Autorização
+// Bloco 4: Configuração da Autorização (COM A LÓGICA CORRETA RESTAURADA)
 //
 builder.Services.AddAuthorization(options => {
     var cookieSchemes = new[] { IdentityConstants.ApplicationScheme, "AdminLoginScheme", "CollaboratorLoginScheme" };
     var jwtScheme = new[] { JwtBearerDefaults.AuthenticationScheme };
 
     options.AddPolicy("AdminAccessUI", p => p.RequireRole("Admin").AddAuthenticationSchemes(cookieSchemes).RequireAuthenticatedUser());
+    
+    // CORREÇÃO: A política de Colaborador volta a permitir o acesso a Admins E Colaboradores.
     options.AddPolicy("CollaboratorAccessUI", p => p.RequireRole("Admin", "Collaborator").AddAuthenticationSchemes(cookieSchemes).RequireAuthenticatedUser());
+    
     options.AddPolicy("AdminAccessApi", p => p.RequireRole("Admin").AddAuthenticationSchemes(jwtScheme).RequireAuthenticatedUser());
     options.AddPolicy("CollaboratorAccessApi", p => p.RequireRole("Admin", "Collaborator").AddAuthenticationSchemes(jwtScheme).RequireAuthenticatedUser());
     options.AddPolicy("AdminGeneralApiAccess", p => p.RequireRole("Admin").AddAuthenticationSchemes(cookieSchemes).AddAuthenticationSchemes(jwtScheme).RequireAuthenticatedUser());
 });
 
 //
-// Bloco 5: Configuração de Outros Serviços da Aplicação
+// Bloco 5: Configuração de Outros Serviços
 //
 builder.Services.AddControllersWithViews().AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
+builder.Services.AddAntiforgery(options => { options.HeaderName = "RequestVerificationToken"; });
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<TokenService>();
-builder.Services.AddEndpointsApiExplorer();
 
-// Configuração do Swagger para documentação da API.
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
@@ -108,7 +109,6 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "API para o Sistema Integrado de Gestão de Recursos Humanos"
     });
-
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
@@ -132,27 +132,17 @@ else
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
-
 app.UseHttpsRedirection();
-
-
-app.UseStaticFiles(new StaticFileOptions
-{
-    ServeUnknownFileTypes = true,
-    DefaultContentType = "application/octet-stream"
-});
-// ------------------------------------
-
+app.UseStaticFiles(new StaticFileOptions { ServeUnknownFileTypes = true, DefaultContentType = "application/octet-stream" });
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapRazorPages();
 app.MapControllers();
 
 //
-// Bloco 7: Seeding da Base de Dados (Criação de Dados Iniciais)
+// Bloco 7: Seeding da Base de Dados
 //
 using (var scope = app.Services.CreateScope())
 {
@@ -164,14 +154,11 @@ using (var scope = app.Services.CreateScope())
         var logger = services.GetRequiredService<ILogger<Program>>();
         var configuration = services.GetRequiredService<IConfiguration>();
         var pinHasher = services.GetRequiredService<IPasswordHasher<SIGHRUser>>();
-        var context = services.GetRequiredService<SIGHRContext>();
-
-        // Executar seeding APENAS em desenvolvimento ou ambiente de teste
         if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
         {
             await SeedRolesAsync(roleManager, logger);
             await SeedAdminUserWithHashedPinAsync(userManager, roleManager, pinHasher, logger, configuration);
-            await SeedApiTestUserAsync(userManager, roleManager, logger); // Alterado para otv
+            await SeedApiTestUserAsync(userManager, roleManager, logger);
         }
         else
         {
@@ -186,14 +173,9 @@ using (var scope = app.Services.CreateScope())
 }
 app.Run();
 
-
 //
-// Bloco 8: Métodos de Seeding
+// Bloco 8: Métodos de Seeding (COM O ADMIN A RECEBER AS DUAS FUNÇÕES)
 //
-
-// <summary>
-// Cria as funções (Roles) "Admin" e "Collaborator" se ainda não existirem.
-// </summary>
 async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager, ILogger<Program> logger)
 {
     string[] roleNames = { "Admin", "Collaborator" };
@@ -202,102 +184,98 @@ async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager, ILogger<Program
         if (!await roleManager.RoleExistsAsync(roleName))
         {
             var result = await roleManager.CreateAsync(new IdentityRole(roleName));
-            if (result.Succeeded) logger.LogInformation("Função '{RoleName}' criada.", roleName);
-            else foreach (var error in result.Errors) logger.LogError("Erro ao criar a função '{RoleName}': {ErrorDescription}", roleName, error.Description);
+            if (result.Succeeded)
+            {
+                logger.LogInformation("Função '{RoleName}' criada.", roleName);
+            }
+            else
+            {
+                foreach (var error in result.Errors)
+                {
+                    logger.LogError("Erro ao criar a função '{RoleName}': {ErrorDescription}", roleName, error.Description);
+                }
+            }
         }
     }
 }
 
-// <summary>
-// Cria um utilizador administrador inicial com um PIN codificado, lendo os dados de appsettings.json.
-// Garante que o utilizador tem a Role 'Admin' mesmo que já exista.
-// </summary>
 async Task SeedAdminUserWithHashedPinAsync(UserManager<SIGHRUser> userManager, RoleManager<IdentityRole> roleManager, IPasswordHasher<SIGHRUser> pinHasher, ILogger<Program> logger, IConfiguration configuration)
 {
-    // Credenciais para o utilizador Admin. Em produção, DEVE usar variáveis de ambiente ou Key Vault.
     string configUserName = configuration["SeedAdminCredentials:UserName"] ?? "bernardo.alves";
     string configEmail = configuration["SeedAdminCredentials:Email"] ?? $"admin_{configUserName}@sighr.com";
     if (!int.TryParse(configuration["SeedAdminCredentials:PIN"] ?? "1311", out int adminPIN)) adminPIN = 1311;
     string configNomeCompleto = configuration["SeedAdminCredentials:NomeCompleto"] ?? "Bernardo Alves (Admin)";
-    string configPassword = configuration["SeedAdminCredentials:Password"] ?? Guid.NewGuid().ToString() + "P@ss1!"; // Use uma password forte e aleatória em produção.
-
-    string adminRoleName = "Admin";
+    string configPassword = configuration["SeedAdminCredentials:Password"] ?? Guid.NewGuid().ToString() + "P@ss1!";
+    
     var existingUser = await userManager.FindByNameAsync(configUserName);
-
     if (existingUser == null)
     {
-        var user = new SIGHRUser { UserName = configUserName, Email = configEmail, EmailConfirmed = true, NomeCompleto = configNomeCompleto, Tipo = adminRoleName, PinnedHash = pinHasher.HashPassword(null!, adminPIN.ToString()) };
+        var user = new SIGHRUser { UserName = configUserName, Email = configEmail, EmailConfirmed = true, NomeCompleto = configNomeCompleto, Tipo = "Admin", PinnedHash = pinHasher.HashPassword(null!, adminPIN.ToString()) };
         var result = await userManager.CreateAsync(user, configPassword);
-        if (result.Succeeded) await userManager.AddToRoleAsync(user, adminRoleName);
-        else foreach (var error in result.Errors) logger.LogError("Erro ao criar utilizador Admin '{UserName}': {ErrorDescription}", user.UserName, error.Description);
-    }
-    else
-    {
-        // Garante que o utilizador já existente tem a role 'Admin'
-        if (!await userManager.IsInRoleAsync(existingUser, adminRoleName))
-        {
-            await userManager.AddToRoleAsync(existingUser, adminRoleName);
-            logger.LogInformation("Utilizador Admin '{UserName}' adicionado à função '{RoleName}'.", existingUser.UserName, adminRoleName);
-        }
-        // Garante que a propriedade Tipo também está correta
-        if (existingUser.Tipo != adminRoleName)
-        {
-            existingUser.Tipo = adminRoleName;
-            await userManager.UpdateAsync(existingUser);
-            logger.LogInformation("Utilizador Admin '{UserName}' Tipo atualizado para '{NewType}'.", existingUser.UserName, adminRoleName);
-        }
-    }
-}
-
-// <summary>
-// Cria um utilizador de teste específico para a API, com uma palavra-passe conhecida.
-// Garante que o utilizador tem a Role 'Admin' (ou a role pretendida) e o Tipo corretos, mesmo que já exista.
-// </summary>
-async Task SeedApiTestUserAsync(UserManager<SIGHRUser> userManager, RoleManager<IdentityRole> roleManager, ILogger<Program> logger)
-{
-    string testUserName = "otv"; // Nome de utilizador para o teste da API
-    string testEmail = "otv@test.com";
-    string testPassword = "PasswordApi123!"; // Palavra-passe do utilizador de teste
-    string targetRoleName = "Admin"; // A função (Role) que queremos que este utilizador tenha
-
-    var existingUser = await userManager.FindByNameAsync(testUserName);
-    if (existingUser == null)
-    {
-        var apiUser = new SIGHRUser
-        {
-            UserName = testUserName,
-            Email = testEmail,
-            EmailConfirmed = true,
-            NomeCompleto = "Utilizador OTV Teste API",
-            Tipo = targetRoleName,
-            PinnedHash = null
-        };
-
-        var result = await userManager.CreateAsync(apiUser, testPassword);
         if (result.Succeeded)
         {
-            logger.LogInformation("Utilizador de teste de API '{UserName}' criado com sucesso.", apiUser.UserName);
-            if (await roleManager.RoleExistsAsync(targetRoleName))
+            await userManager.AddToRoleAsync(user, "Admin");
+            await userManager.AddToRoleAsync(user, "Collaborator");
+            logger.LogInformation("Utilizador Admin '{UserName}' criado com as funções 'Admin' e 'Collaborator'.", user.UserName);
+        }
+        else
+        {
+            foreach (var error in result.Errors)
             {
-                await userManager.AddToRoleAsync(apiUser, targetRoleName);
-                logger.LogInformation("Utilizador '{UserName}' adicionado à função '{RoleName}'.", apiUser.UserName, targetRoleName);
+                logger.LogError("Erro ao criar utilizador Admin '{UserName}': {ErrorDescription}", user.UserName, error.Description);
             }
         }
     }
     else
     {
-        // Se o utilizador já existe, garante que ele tem a role correta.
+        if (!await userManager.IsInRoleAsync(existingUser, "Admin"))
+        {
+            await userManager.AddToRoleAsync(existingUser, "Admin");
+            logger.LogInformation("Função 'Admin' adicionada ao utilizador existente '{UserName}'.", existingUser.UserName);
+        }
+        if (!await userManager.IsInRoleAsync(existingUser, "Collaborator"))
+        {
+            await userManager.AddToRoleAsync(existingUser, "Collaborator");
+            logger.LogInformation("Função 'Collaborator' adicionada ao utilizador existente '{UserName}'.", existingUser.UserName);
+        }
+        if (existingUser.Tipo != "Admin")
+        {
+            existingUser.Tipo = "Admin";
+            await userManager.UpdateAsync(existingUser);
+        }
+    }
+}
+
+async Task SeedApiTestUserAsync(UserManager<SIGHRUser> userManager, RoleManager<IdentityRole> roleManager, ILogger<Program> logger)
+{
+    string testUserName = "otv";
+    string testEmail = "otv@test.com";
+    string testPassword = "PasswordApi123!";
+    string targetRoleName = "Admin";
+
+    var existingUser = await userManager.FindByNameAsync(testUserName);
+    if (existingUser == null)
+    {
+        var apiUser = new SIGHRUser { UserName = testUserName, Email = testEmail, EmailConfirmed = true, NomeCompleto = "Utilizador OTV Teste API", Tipo = targetRoleName, PinnedHash = null };
+        var result = await userManager.CreateAsync(apiUser, testPassword);
+        if (result.Succeeded)
+        {
+            if (await roleManager.RoleExistsAsync(targetRoleName))
+            {
+                await userManager.AddToRoleAsync(apiUser, targetRoleName);
+            }
+        }
+    }
+    else
+    {
         if (!await userManager.IsInRoleAsync(existingUser, targetRoleName))
         {
             await userManager.AddToRoleAsync(existingUser, targetRoleName);
-            logger.LogInformation("Utilizador existente '{UserName}' adicionado à função '{RoleName}'.", existingUser.UserName, targetRoleName);
         }
-        // E garante que a propriedade Tipo também está correta.
         if (existingUser.Tipo != targetRoleName)
         {
             existingUser.Tipo = targetRoleName;
             await userManager.UpdateAsync(existingUser);
-            logger.LogInformation("Utilizador existente '{UserName}' Tipo atualizado para '{NewType}'.", existingUser.UserName, targetRoleName);
         }
     }
 }

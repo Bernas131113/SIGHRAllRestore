@@ -27,6 +27,8 @@ namespace SIGHR.Areas.Identity.Data
         public DbSet<Encomenda> Encomendas { get; set; }
         public DbSet<Material> Materiais { get; set; }
         public DbSet<Requisicao> Requisicoes { get; set; }
+
+        public DbSet<Ferias> Ferias { get; set; }
         // Adicione aqui quaisquer outros DbSets de entidades que venha a criar.
 
         /// <summary>
@@ -94,6 +96,15 @@ namespace SIGHR.Areas.Identity.Data
                       .HasForeignKey(e => e.UtilizadorId)
                       .IsRequired();
                 entity.HasIndex(e => e.UtilizadorId);
+            });
+
+            modelBuilder.Entity<Ferias>(entity =>
+            {
+                entity.HasOne(f => f.User)
+                      .WithMany(u => u.Ferias)
+                      .HasForeignKey(f => f.UtilizadorId)
+                      .IsRequired();
+                entity.HasIndex(f => f.UtilizadorId);
             });
         }
     }
