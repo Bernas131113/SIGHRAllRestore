@@ -3,20 +3,24 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"]SIGHR</title>
+    <title>@ViewData["Title"] - SIGHR</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png"> <!-- <<< CORRIGIDO -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg"> <!-- <<< CORRIGIDO -->
-    <link rel="icon" href="/favicon.ico"> <!-- <<< Fallback para browsers antigos -->
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" href="/favicon.ico">
     <link rel="manifest" href="/site.webmanifest">
     <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/SIGHR.styles.css" asp-append-version="true" />
+
+    <!-- ===== LINHA ADICIONADA AQUI ===== -->
+    @await RenderSectionAsync("Styles", required: false)
+
 </head>
 <body>
     <header>
-        
+        <!-- O teu header aqui, se tiveres um para as páginas públicas -->
     </header>
     <div class="container">
         <main role="main" class="pb-3">
@@ -29,9 +33,10 @@
             &copy; 2025 - SIGHR - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

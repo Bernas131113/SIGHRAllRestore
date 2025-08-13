@@ -47,6 +47,9 @@
                 <li class="@(IsControllerActive(ViewContext, "Faltas") && IsRouteActive(ViewContext, "Faltas", "GestaoAdmin") ? "active" : "")">
                     <a asp-controller="Faltas" asp-action="GestaoAdmin">Gestão de Faltas</a>
                 </li>
+                <li class="@(IsRouteActive(ViewContext, "Ferias", "Gestao") ? "active" : "")">
+                    <a asp-controller="Ferias" asp-action="Gestao">Gestão de Férias</a>
+                </li>
             </ul>
         </nav>
         <form asp-controller="Admin" asp-action="Logout" method="post" id="adminLayoutLogoutForm">

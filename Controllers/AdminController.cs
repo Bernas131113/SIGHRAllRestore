@@ -90,64 +90,111 @@ namespace SIGHR.Controllers
                 query = query.Where(h => h.Data.Date == filtroDataUtc.Date);
             }
 
-            var horariosParaExportar = await query.OrderByDescending(h => h.Data).ThenBy(h => h.User != null ? h.User.UserName ?? "" : "").ThenBy(h => h.HoraEntrada).Select(h => new { NomeUtilizador = h.User != null ? (h.User.NomeCompleto ?? h.User.UserName ?? "Desconhecido") : "Desconhecido", h.Data, h.HoraEntrada, h.SaidaAlmoco, h.EntradaAlmoco, h.HoraSaida }).ToListAsync();
+            var horariosParaExportar = await query
+                .OrderByDescending(h => h.Data)
+                .ThenBy(h => h.User != null ? h.User.UserName ?? "" : "")
+                .ThenBy(h => h.HoraEntrada)
+                .Select(h => new
+                {
+                    NomeUtilizador = h.User != null ? (h.User.NomeCompleto ?? h.User.UserName ?? "Desconhecido") : "Desconhecido",
+                    h.Data,
+                    h.HoraEntrada,
+                    h.SaidaAlmoco,
+                    h.EntradaAlmoco,
+                    h.HoraSaida
+                }).ToListAsync();
+
             string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             string fileName = $"RegistosPonto_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+
             using (var workbook = new XLWorkbook())
             {
                 IXLWorksheet worksheet = workbook.Worksheets.Add("Registos de Ponto");
-                worksheet.Cell(1, 1).Value = "Utilizador"; worksheet.Cell(1, 2).Value = "Data"; worksheet.Cell(1, 3).Value = "Entrada"; worksheet.Cell(1, 4).Value = "Saída Almoço"; worksheet.Cell(1, 5).Value = "Entrada Almoço"; worksheet.Cell(1, 6).Value = "Saída"; worksheet.Cell(1, 7).Value = "Total Horas";
+
+                // --- Cabeçalho ---
+                worksheet.Cell(1, 1).Value = "Utilizador";
+                worksheet.Cell(1, 2).Value = "Data";
+                worksheet.Cell(1, 3).Value = "Entrada";
+                worksheet.Cell(1, 4).Value = "Saída Almoço";
+                worksheet.Cell(1, 5).Value = "Entrada Almoço";
+                worksheet.Cell(1, 6).Value = "Saída";
+                worksheet.Cell(1, 7).Value = "Total Horas";
+
                 var headerRow = worksheet.Row(1);
-                headerRow.Style.Font.Bold = true; headerRow.Style.Fill.BackgroundColor = XLColor.LightGray;
+                headerRow.Style.Font.Bold = true;
+                headerRow.Style.Fill.BackgroundColor = XLColor.LightGray;
+
+                // --- Dados ---
                 int currentRow = 2;
                 foreach (var item in horariosParaExportar)
                 {
                     worksheet.Cell(currentRow, 1).SetValue(item.NomeUtilizador);
-                    worksheet.Cell(currentRow, 2).SetValue(item.Data.ToLocalTime().ToString("dd/MM/yyyy"));
+                    worksheet.Cell(currentRow, 2).SetValue(item.Data.ToLocalTime()); // Escreve a data
 
-                    // ---- CORREÇÃO FINAL APLICADA AQUI ----
-                    // Escreve a hora já formatada como TEXTO, garantindo consistência com a UI.
+                    // Escreve as horas. O Excel irá guardar isto como um número decimal.
+                    // A parte do dia será ignorada por causa da formatação da célula.
+                    worksheet.Cell(currentRow, 3).SetValue(item.HoraEntrada.ToLocalTime());
+                    worksheet.Cell(currentRow, 4).SetValue(item.SaidaAlmoco.ToLocalTime());
+                    worksheet.Cell(currentRow, 5).SetValue(item.EntradaAlmoco.ToLocalTime());
+                    worksheet.Cell(currentRow, 6).SetValue(item.HoraSaida.ToLocalTime());
 
-                    if (item.HoraEntrada.Year > 1)
-                        worksheet.Cell(currentRow, 3).SetValue(item.HoraEntrada.ToLocalTime().ToString("HH:mm"));
-                    else
-                        worksheet.Cell(currentRow, 3).SetValue("--:--");
-
-                    if (item.SaidaAlmoco.Year > 1)
-                        worksheet.Cell(currentRow, 4).SetValue(item.SaidaAlmoco.ToLocalTime().ToString("HH:mm"));
-                    else
-                        worksheet.Cell(currentRow, 4).SetValue("--:--");
-
-                    if (item.EntradaAlmoco.Year > 1)
-                        worksheet.Cell(currentRow, 5).SetValue(item.EntradaAlmoco.ToLocalTime().ToString("HH:mm"));
-                    else
-                        worksheet.Cell(currentRow, 5).SetValue("--:--");
-
-                    if (item.HoraSaida.Year > 1)
-                        worksheet.Cell(currentRow, 6).SetValue(item.HoraSaida.ToLocalTime().ToString("HH:mm"));
-                    else
-                        worksheet.Cell(currentRow, 6).SetValue("--:--");
-                    // ------------------------------------
-
-                    TimeSpan totalTrabalhadoExcel = TimeSpan.Zero;
+                    // --- CÁLCULO DO TEMPO E INSERÇÃO DO TIMESPAN ---
+                    TimeSpan totalTrabalhado = TimeSpan.Zero;
                     if (item.HoraEntrada.Year > 1 && item.HoraSaida.Year > 1)
                     {
-                        TimeSpan tempoAlmocoExcel = TimeSpan.Zero;
-                        if (item.EntradaAlmoco > item.SaidaAlmoco) tempoAlmocoExcel = item.EntradaAlmoco.TimeOfDay - item.SaidaAlmoco.TimeOfDay;
-                        totalTrabalhadoExcel = (item.HoraSaida.TimeOfDay - item.HoraEntrada.TimeOfDay) - tempoAlmocoExcel;
-                        if (totalTrabalhadoExcel < TimeSpan.Zero) totalTrabalhadoExcel = TimeSpan.Zero;
+                        TimeSpan tempoAlmoco = TimeSpan.Zero;
+                        if (item.EntradaAlmoco > item.SaidaAlmoco)
+                            tempoAlmoco = item.EntradaAlmoco.TimeOfDay - item.SaidaAlmoco.TimeOfDay;
+
+                        totalTrabalhado = (item.HoraSaida.TimeOfDay - item.HoraEntrada.TimeOfDay) - tempoAlmoco;
+                        if (totalTrabalhado < TimeSpan.Zero) totalTrabalhado = TimeSpan.Zero;
                     }
 
-                    if (totalTrabalhadoExcel > TimeSpan.Zero)
-                        worksheet.Cell(currentRow, 7).SetValue(totalTrabalhadoExcel.ToString(@"hh\:mm"));
-                    else
-                        worksheet.Cell(currentRow, 7).SetValue("00:00");
+                    // Inserir o TimeSpan diretamente. O ClosedXML sabe como lidar com isto.
+                    worksheet.Cell(currentRow, 7).SetValue(totalTrabalhado);
 
                     currentRow++;
                 }
 
-                for (int i = 1; i <= 7; i++) worksheet.Column(i).AdjustToContents();
-                using (var stream = new MemoryStream()) { workbook.SaveAs(stream); return File(stream.ToArray(), contentType, fileName); }
+                // ================== A MAGIA ACONTECE AQUI ==================
+                // Aplicar a formatação de CÉLULA correta a toda a coluna.
+
+                // Coluna da Data
+                worksheet.Column(2).Style.NumberFormat.Format = "dd/mm/yyyy";
+
+                // Colunas de Horas (Entrada/Saída)
+                // O formato "HH:mm" é para horas do dia.
+                worksheet.Column(3).Style.NumberFormat.Format = "HH:mm";
+                worksheet.Column(4).Style.NumberFormat.Format = "HH:mm";
+                worksheet.Column(5).Style.NumberFormat.Format = "HH:mm";
+                worksheet.Column(6).Style.NumberFormat.Format = "HH:mm";
+
+                // Coluna de Total de Horas
+                // O formato "[h]:mm" é especial. Permite que o Excel mostre mais de 24 horas,
+                // o que é essencial para somar totais de tempo.
+                worksheet.Column(7).Style.NumberFormat.Format = "[h]:mm";
+
+                // Ajustar a largura das colunas ao conteúdo.
+                for (int i = 1; i <= 7; i++)
+                {
+                    worksheet.Column(i).AdjustToContents();
+                }
+
+                // Adicionar uma linha de Total no final
+                if (currentRow > 2) // Apenas se houver dados
+                {
+                    var totalRow = worksheet.Row(currentRow);
+                    totalRow.Style.Font.Bold = true;
+                    worksheet.Cell(currentRow, 6).SetValue("Total:");
+                    // Adiciona a FÓRMULA de soma para a coluna 7 (Total Horas)
+                    worksheet.Cell(currentRow, 7).FormulaA1 = $"=SUM(G2:G{currentRow - 1})";
+                }
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return File(stream.ToArray(), contentType, fileName);
+                }
             }
         }
 

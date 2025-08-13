@@ -58,8 +58,14 @@
                 <li class="@(IsControllerActive(ViewContext, "Encomendas") ? "active" : "")">
                     <a asp-controller="Encomendas" asp-action="MinhasEncomendas">As Minhas Encomendas</a>
                 </li>
+                <li class="@(IsControllerActive(ViewContext, "Ferias") ? "active" : "")">
+                    <a asp-controller="Ferias" asp-action="Index">Férias</a>
+                </li>
+                <li class="@(IsRouteActive(ViewContext, "Collaborator", "Manage") ? "active" : "")">
+                    <a asp-controller="Collaborator" asp-action="Manage">Gerir Perfil e PIN</a>
+                </li>
                 <li class="@(IsRouteActive(ViewContext, "Collaborator", "MinhaConta") ? "active" : "")">
-                    <a asp-controller="Collaborator" asp-action="MinhaConta">A Minha Conta</a>
+                    <a asp-controller="Collaborator" asp-action="MinhaConta">Gerir Registo Facial</a>
                 </li>
             </ul>
         </nav>

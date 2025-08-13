@@ -1,0 +1,85 @@
+﻿@model SIGHR.Models.ViewModels.CollaboratorManageViewModel
+@{
+    ViewData["Title"] = "Gerir a Minha Conta";
+    Layout = "_LayoutCollaborator";
+}
+
+<style>
+    .manage-container { max-width: 700px; margin: auto; }
+    .card {
+        border: 1px solid #ddd; border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 2rem;
+    }
+    .card-header {
+        background-color: #f7f7f7; padding: 1rem 1.25rem;
+        border-bottom: 1px solid #ddd; font-weight: 500;
+    }
+    .card-body { padding: 1.5rem; }
+</style>
+
+<div class="content manage-container">
+    <h2>@ViewData["Title"]</h2>
+    <p class="text-muted">Atualize os seus dados de perfil e segurança.</p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <!-- Formulário para Dados do Perfil -->
+    <div class="card">
+        <div class="card-header">Dados do Perfil</div>
+        <div class="card-body">
+            <form asp-action="Manage" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="form-group mb-3">
+                    <label asp-for="UserName" class="form-label"></label>
+                    <input asp-for="UserName" class="form-control" />
+                    <span asp-validation-for="UserName" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="NomeCompleto" class="form-label"></label>
+                    <input asp-for="NomeCompleto" class="form-control" />
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+                <button type="submit" class="btn-custom-style btn-green-custom">Guardar Perfil</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Formulário para Alterar o PIN -->
+    <div class="card">
+        <div class="card-header">Alterar PIN de Acesso</div>
+        <div class="card-body">
+            <form asp-action="ChangePin" method="post">
+                <div class="form-group mb-3">
+                    <label asp-for="OldPin" class="form-label"></label>
+                    <input asp-for="OldPin" type="password" class="form-control" placeholder="****" />
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="NewPin" class="form-label"></label>
+                    <input asp-for="NewPin" type="password" class="form-control" placeholder="****" />
+                    <span asp-validation-for="NewPin" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="ConfirmNewPin" class="form-label"></label>
+                    <input asp-for="ConfirmNewPin" type="password" class="form-control" placeholder="****" />
+                    <span asp-validation-for="ConfirmNewPin" class="text-danger"></span>
+                </div>
+                <button type="submit" class="btn-custom-style btn-green-custom">Alterar PIN</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

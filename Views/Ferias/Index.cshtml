@@ -1,0 +1,202 @@
+﻿@* Local: Views/Ferias/Index.cshtml *@
+@{
+    ViewData["Title"] = "Calendário de Férias";
+    Layout = "_LayoutCollaborator";
+}
+<form style="display: none;">@Html.AntiForgeryToken()</form>
+
+@section Styles {
+    @* O CSS está incluído no próprio ficheiro JS *@
+    <style>
+
+        .fc-list-table tr {
+            border-bottom: none !important;
+        }
+
+        /* Estilo para a barra do dia (ex: "quinta-feira, 14 de agosto de 2025") */
+        .fc-list-day-cushion {
+            background-color: #f1f3f5; /* Um cinzento muito claro */
+            padding: 10px 15px;
+            font-weight: 600;
+            color: #343a40;
+        }
+
+        /* Estilo para cada linha de evento individual */
+        .fc-list-event {
+            transition: background-color 0.2s ease-in-out;
+            padding: 12px 15px;
+        }
+
+            /* Efeito de hover para dar feedback visual */
+            .fc-list-event:hover {
+                background-color: #e9ecef;
+            }
+
+        /* O ponto colorido ao lado do evento */
+        .fc-list-event-dot {
+            border-color: var(--fc-event-bg-color) !important; /* Usa a cor do evento definida na API */
+        }
+
+        /* O título do evento (o nome do colaborador) */
+        .fc-list-event-title a { /* O nome está dentro de um link <a> */
+            color: #212529 !important; /* Um preto suave */
+            font-size: 1.1rem; /* Aumenta um pouco o tamanho da fonte */
+            font-weight: 500;
+            text-decoration: none; /* Remove o sublinhado */
+        }
+
+        /* A hora do evento (para a vista de lista, isto normalmente não aparece, mas é útil para outras listas) */
+        .fc-list-event-time {
+            color: #6c757d; /* Cinzento */
+        }
+        #calendar {
+            max-width: 1100px;
+            margin: 20px auto;
+        }
+
+        .info-bar {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+            .info-bar strong {
+                color: #007bff;
+            }
+
+        :root {
+            --fc-event-bg-color: #0d6efd;
+            --fc-event-border-color: #0d6efd;
+            --fc-event-text-color: #ffffff;
+        }
+
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 1.5rem;
+            border-radius: .25rem;
+            color: #fff;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s, visibility 0.5s;
+            z-index: 1050;
+        }
+
+            .toast-notification.show {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .toast-notification.success {
+                background-color: #28a745;
+            }
+
+            .toast-notification.error {
+                background-color: #dc3545;
+            }
+    </style>
+}
+
+<div class="content">
+    <div class="header"><h2>@ViewData["Title"]</h2></div>
+    <div id="ferias-notification" class="toast-notification"></div>
+    <div class="info-bar">
+        Dias de Férias Restantes: <strong id="dias-restantes">A carregar...</strong>
+    </div>
+    <p class="text-muted">Clique e arraste no calendário para selecionar e marcar as suas férias.</p>
+    <div id='calendar'></div>
+</div>
+
+@section Scripts {
+    <script src='~/lib/fullcalendar/index.global.min.js'></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const calendarEl = document.getElementById('calendar');
+            const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            const diasRestantesEl = document.getElementById('dias-restantes');
+            const notificationEl = document.getElementById('ferias-notification');
+
+            let notificationTimeout;
+            function showNotification(message, type = 'success') {
+                clearTimeout(notificationTimeout);
+                notificationEl.className = `toast-notification ${type} show`;
+                notificationEl.textContent = message;
+                notificationTimeout = setTimeout(() => { notificationEl.classList.remove('show'); }, 4000);
+            }
+
+            async function fetchWithCreds(url, options = {}) {
+                options.credentials = 'same-origin';
+                options.headers = { ...options.headers, 'RequestVerificationToken': antiForgeryToken, 'Content-Type': 'application/json' };
+                return fetch(url, options);
+            }
+
+            async function atualizarDiasRestantes() {
+                try {
+                    const response = await fetchWithCreds('/api/ferias/diasrestantes');
+                    if (response.ok) {
+                        const data = await response.json();
+                        diasRestantesEl.textContent = data.dias;
+                    } else { diasRestantesEl.textContent = 'Erro!'; }
+                } catch(e) { diasRestantesEl.textContent = 'Erro de rede.'; }
+            }
+            atualizarDiasRestantes();
+
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listWeek' },
+                locale: 'pt',
+                events: '/api/ferias/eventos',
+                selectable: true,
+                select: async function(selectionInfo) {
+
+                    let dataFinalCorreta = new Date(selectionInfo.end);
+                    dataFinalCorreta.setDate(dataFinalCorreta.getDate() - 1);
+
+                    // ====================== A CORREÇÃO FINAL E DEFINITIVA ======================
+                    // Função auxiliar para formatar datas de forma segura, sem conversões de fuso horário.
+                    function formatarDataParaAPI(data) {
+                        const ano = data.getFullYear();
+                        const mes = String(data.getMonth() + 1).padStart(2, '0'); // Mês é 0-indexado
+                        const dia = String(data.getDate()).padStart(2, '0');
+                        return `${ano}-${mes}-${dia}`;
+                    }
+
+                    // A `startStr` já vem no formato YYYY-MM-DD. Perfeito.
+                    const dataInicioStr = selectionInfo.startStr;
+                    // A `dataFinalCorreta` precisa de ser formatada com a nossa função segura.
+                    const dataFinalStr = formatarDataParaAPI(dataFinalCorreta);
+                    // =========================================================================
+
+                    const title = `Marcar férias de ${selectionInfo.start.toLocaleDateString('pt-PT')} a ${dataFinalCorreta.toLocaleDateString('pt-PT')}?`;
+
+                    if (confirm(title)) {
+                        try {
+                            const response = await fetchWithCreds('/api/ferias/marcar', {
+                                method: 'POST',
+                                body: JSON.stringify({ start: dataInicioStr, end: dataFinalStr })
+                            });
+
+                            const result = await response.json();
+
+                            if (response.ok) {
+                                showNotification(result.message, 'success');
+                                calendar.refetchEvents();
+                                diasRestantesEl.textContent = result.diasRestantes;
+                            } else {
+                                showNotification('Erro: ' + result.message, 'error');
+                            }
+                        } catch (e) {
+                            showNotification('Erro de comunicação.', 'error');
+                        }
+                    }
+                    calendar.unselect();
+                }
+            });
+            calendar.render();
+        });
+    </script>
+}
