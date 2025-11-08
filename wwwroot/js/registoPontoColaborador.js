@@ -1,5 +1,42 @@
 ﻿// wwwroot/js/registoPontoColaborador.js
 
+/**
+ * Obtém a posição geográfica atual do utilizador.
+ * Retorna uma Promise que resolve com { latitude, longitude } ou { latitude: 0, longitude: 0 } em caso de erro.
+ */
+function getPosicaoAtual() {
+    return new Promise((resolve) => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (posicao) => {
+                    // Sucesso!
+                    resolve({
+                        latitude: posicao.coords.latitude,
+                        longitude: posicao.coords.longitude
+                    });
+                },
+                (erro) => {
+                    // Erro (ex: permissão recusada)
+                    console.warn(`Erro ao obter localização (Código: ${erro.code}): ${erro.message}`);
+                    // Resolvemos com 0,0 para não bloquear o registo de ponto
+                    resolve({ latitude: 0, longitude: 0 });
+                },
+                {
+                    // Opções
+                    enableHighAccuracy: true, // Pede mais precisão
+                    timeout: 10000,           // Limite de 10 segundos
+                    maximumAge: 0             // Não usar cache
+                }
+            );
+        } else {
+            // Browser não suporta geolocalização
+            console.warn("Geolocalização não é suportada por este browser.");
+            resolve({ latitude: 0, longitude: 0 });
+        }
+    });
+}
+
+
 document.addEventListener('DOMContentLoaded', function () {
     //
     // Bloco de Inicialização e Seleção de Elementos
@@ -19,11 +56,18 @@ document.addEventListener('DOMContentLoaded', function () {
     //
     // Bloco de Funções de Feedback Visual (Notificações)
     //
-    function showLoading() {
-        if (loadingMsg) loadingMsg.style.display = 'block';
+
+    // ================== FUNÇÃO MODIFICADA ==================
+    function showLoading(message = "A processar...") { // Adiciona mensagem opcional
+        if (loadingMsg) {
+            loadingMsg.textContent = message; // Define o texto
+            loadingMsg.style.display = 'block';
+        }
         if (successMsg) successMsg.style.display = 'none';
         if (errorMsg) errorMsg.style.display = 'none';
     }
+    // ================== FIM DA MODIFICAÇÃO ==================
+
 
     function showNotification(element, message, duration) {
         if (element) {
@@ -60,10 +104,13 @@ document.addEventListener('DOMContentLoaded', function () {
     /**
      * Função principal que envia o pedido para registar um ponto (Entrada, Saída, etc.).
      */
+    // ================== FUNÇÃO MODIFICADA ==================
     async function registarPonto(actionUrl, buttonId) {
         const button = document.getElementById(buttonId);
         if (button) button.disabled = true;
-        showLoading();
+
+        // 1. Mensagem de loading atualizada
+        showLoading("A obter localização e a registar...");
 
         const antiForgeryToken = getAntiForgeryToken();
         if (!antiForgeryToken) {
@@ -72,13 +119,27 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        // 2. Obter a localização ANTES de fazer o fetch
+        const localizacao = await getPosicaoAtual();
+        console.log("Localização obtida:", localizacao);
+
+        // 3. Preparar o body para enviar à API
+        const requestBody = JSON.stringify({
+            latitude: localizacao.latitude,
+            longitude: localizacao.longitude
+        });
+
         try {
             const response = await fetch(actionUrl, {
                 method: 'POST',
                 headers: {
                     'RequestVerificationToken': antiForgeryToken,
-                    'Accept': 'application/json'
-                }
+                    'Accept': 'application/json',
+                    // 4. Adicionar o Content-Type para o JSON
+                    'Content-Type': 'application/json'
+                },
+                // 5. Adicionar o body com as coordenadas
+                body: requestBody
             });
 
             const data = await response.json();
@@ -93,9 +154,12 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Erro na requisição de ponto:', error);
             showError('Erro de rede ou ao processar o pedido. Tente novamente.');
         } finally {
+            if (loadingMsg) loadingMsg.style.display = 'none'; // <- Garante que o loading desaparece
             if (button) button.disabled = false;
         }
     }
+    // ================== FIM DA MODIFICAÇÃO ==================
+
 
     /**
      * Função auxiliar para formatar a hora de um objeto Date para HH:MM no fuso horário local e em formato de 24 horas.

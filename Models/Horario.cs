@@ -48,6 +48,24 @@ namespace SIGHR.Models
         [Required(ErrorMessage = "A hora de saída para almoço é obrigatória.")]
         public DateTime SaidaAlmoco { get; set; } // ALTERADO DE TimeSpan PARA DateTime
 
+        //
+        // ================== INÍCIO DAS NOVAS PROPRIEDADES ==================
+        //
+        public double? LatitudeEntrada { get; set; }
+        public double? LongitudeEntrada { get; set; }
+
+        public double? LatitudeSaidaAlmoco { get; set; }
+        public double? LongitudeSaidaAlmoco { get; set; }
+
+        public double? LatitudeEntradaAlmoco { get; set; }
+        public double? LongitudeEntradaAlmoco { get; set; }
+
+        public double? LatitudeSaida { get; set; }
+        public double? LongitudeSaida { get; set; }
+        // 
+        // =================== FIM DAS NOVAS PROPRIEDADES ====================
+        //
+
         [ForeignKey("UtilizadorId")]
         public virtual SIGHRUser? User { get; set; }
     }
