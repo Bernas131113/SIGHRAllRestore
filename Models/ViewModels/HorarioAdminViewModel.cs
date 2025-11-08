@@ -50,7 +50,22 @@ namespace SIGHR.Models.ViewModels
         [Display(Name = "Total de Horas")]
         public string? TotalHorasTrabalhadas { get; set; }
 
-        [Display(Name = "Localização")]
-        public string? Localizacao { get; set; }
+        //
+        // ================== INÍCIO DAS NOVAS PROPRIEDADES ==================
+        //
+        public double? LatitudeEntrada { get; set; }
+        public double? LongitudeEntrada { get; set; }
+
+        public double? LatitudeSaidaAlmoco { get; set; }
+        public double? LongitudeSaidaAlmoco { get; set; }
+
+        public double? LatitudeEntradaAlmoco { get; set; }
+        public double? LongitudeEntradaAlmoco { get; set; }
+
+        public double? LatitudeSaida { get; set; }
+        public double? LongitudeSaida { get; set; }
+        // 
+        // =================== FIM DAS NOVAS PROPRIEDADES ====================
+        //
     }
 }

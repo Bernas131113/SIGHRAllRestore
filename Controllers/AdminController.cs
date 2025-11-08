@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ClosedXML.Excel;
 using SIGHR.Areas.Identity.Data;
+using System.Globalization;
 
 namespace SIGHR.Controllers
 {
@@ -71,9 +72,19 @@ namespace SIGHR.Controllers
                     SaidaAlmoco = h.SaidaAlmoco,
                     EntradaAlmoco = h.EntradaAlmoco,
                     HoraSaida = h.HoraSaida,
-                    TotalHorasTrabalhadas = totalTrabalhado > TimeSpan.Zero ? $"{(int)totalTrabalhado.TotalHours:D2}:{totalTrabalhado.Minutes:D2}" : "--:--"
+                    TotalHorasTrabalhadas = totalTrabalhado > TimeSpan.Zero ? $"{(int)totalTrabalhado.TotalHours:D2}:{totalTrabalhado.Minutes:D2}" : "--:--",
+
+                    LatitudeEntrada = h.LatitudeEntrada,
+                    LongitudeEntrada = h.LongitudeEntrada,
+                    LatitudeSaidaAlmoco = h.LatitudeSaidaAlmoco,
+                    LongitudeSaidaAlmoco = h.LongitudeSaidaAlmoco,
+                    LatitudeEntradaAlmoco = h.LatitudeEntradaAlmoco,
+                    LongitudeEntradaAlmoco = h.LongitudeEntradaAlmoco,
+                    LatitudeSaida = h.LatitudeSaida,
+                    LongitudeSaida = h.LongitudeSaida
                 };
             }).ToList();
+
             ViewData["FiltroNomeAtual"] = filtroNome;
             ViewData["FiltroDataAtual"] = filtroData?.ToString("yyyy-MM-dd");
             return View(viewModels);
@@ -101,7 +112,16 @@ namespace SIGHR.Controllers
                     h.HoraEntrada,
                     h.SaidaAlmoco,
                     h.EntradaAlmoco,
-                    h.HoraSaida
+                    h.HoraSaida,
+
+                    h.LatitudeEntrada,
+                    h.LongitudeEntrada,
+                    h.LatitudeSaidaAlmoco,
+                    h.LongitudeSaidaAlmoco,
+                    h.LatitudeEntradaAlmoco,
+                    h.LongitudeEntradaAlmoco,
+                    h.LatitudeSaida,
+                    h.LongitudeSaida
                 }).ToListAsync();
 
             string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -119,6 +139,15 @@ namespace SIGHR.Controllers
                 worksheet.Cell(1, 5).Value = "Entrada Almoço";
                 worksheet.Cell(1, 6).Value = "Saída";
                 worksheet.Cell(1, 7).Value = "Total Horas";
+                worksheet.Cell(1, 8).Value = "Lat Entrada";
+                worksheet.Cell(1, 9).Value = "Lon Entrada";
+                worksheet.Cell(1, 10).Value = "Lat S. Almoço";
+                worksheet.Cell(1, 11).Value = "Lon S. Almoço";
+                worksheet.Cell(1, 12).Value = "Lat E. Almoço";
+                worksheet.Cell(1, 13).Value = "Lon E. Almoço";
+                worksheet.Cell(1, 14).Value = "Lat Saída";
+                worksheet.Cell(1, 15).Value = "Lon Saída";
+                worksheet.Cell(1, 16).Value = "Link Mapa Entrada";
 
                 var headerRow = worksheet.Row(1);
                 headerRow.Style.Font.Bold = true;
@@ -129,64 +158,84 @@ namespace SIGHR.Controllers
                 foreach (var item in horariosParaExportar)
                 {
                     worksheet.Cell(currentRow, 1).SetValue(item.NomeUtilizador);
-                    worksheet.Cell(currentRow, 2).SetValue(item.Data.ToLocalTime()); // Escreve a data
-
-                    // Escreve as horas. O Excel irá guardar isto como um número decimal.
-                    // A parte do dia será ignorada por causa da formatação da célula.
+                    worksheet.Cell(currentRow, 2).SetValue(item.Data.ToLocalTime());
                     worksheet.Cell(currentRow, 3).SetValue(item.HoraEntrada.ToLocalTime());
                     worksheet.Cell(currentRow, 4).SetValue(item.SaidaAlmoco.ToLocalTime());
                     worksheet.Cell(currentRow, 5).SetValue(item.EntradaAlmoco.ToLocalTime());
                     worksheet.Cell(currentRow, 6).SetValue(item.HoraSaida.ToLocalTime());
 
-                    // --- CÁLCULO DO TEMPO E INSERÇÃO DO TIMESPAN ---
                     TimeSpan totalTrabalhado = TimeSpan.Zero;
                     if (item.HoraEntrada.Year > 1 && item.HoraSaida.Year > 1)
                     {
                         TimeSpan tempoAlmoco = TimeSpan.Zero;
                         if (item.EntradaAlmoco > item.SaidaAlmoco)
                             tempoAlmoco = item.EntradaAlmoco.TimeOfDay - item.SaidaAlmoco.TimeOfDay;
-
                         totalTrabalhado = (item.HoraSaida.TimeOfDay - item.HoraEntrada.TimeOfDay) - tempoAlmoco;
                         if (totalTrabalhado < TimeSpan.Zero) totalTrabalhado = TimeSpan.Zero;
                     }
-
-                    // Inserir o TimeSpan diretamente. O ClosedXML sabe como lidar com isto.
                     worksheet.Cell(currentRow, 7).SetValue(totalTrabalhado);
+
+
+                    // ================== CORREÇÃO 1: ERROS CS1503 ==================
+                    // A solução correta é simplesmente passar o double? (nullable)
+                    // A biblioteca ClosedXML sabe como lidar com ele.
+
+                    worksheet.Cell(currentRow, 8).SetValue(item.LatitudeEntrada);
+                    worksheet.Cell(currentRow, 9).SetValue(item.LongitudeEntrada);
+                    worksheet.Cell(currentRow, 10).SetValue(item.LatitudeSaidaAlmoco);
+                    worksheet.Cell(currentRow, 11).SetValue(item.LongitudeSaidaAlmoco);
+                    worksheet.Cell(currentRow, 12).SetValue(item.LatitudeEntradaAlmoco);
+                    worksheet.Cell(currentRow, 13).SetValue(item.LongitudeEntradaAlmoco);
+                    worksheet.Cell(currentRow, 14).SetValue(item.LatitudeSaida);
+                    worksheet.Cell(currentRow, 15).SetValue(item.LongitudeSaida);
+
+                    // ================== FIM DA CORREÇÃO 1 ====================
+
+
+                    // ================== CORREÇÃO 2: AVISO CS8629 ==================
+                    if (item.LatitudeEntrada.HasValue && item.LatitudeEntrada != 0)
+                    {
+                        // Adicionamos '!' para informar o compilador que, dentro deste 'if',
+                        // sabemos que .Value não será nulo.
+                        var lat = item.LatitudeEntrada!.Value.ToString("G", CultureInfo.InvariantCulture);
+                        var lon = item.LongitudeEntrada!.Value.ToString("G", CultureInfo.InvariantCulture);
+                        worksheet.Cell(currentRow, 16).FormulaA1 = $"HYPERLINK(\"https://www.google.com/maps?q={lat},{lon}\", \"Ver Mapa\")";
+                        worksheet.Cell(currentRow, 16).Style.Font.FontColor = XLColor.Blue;
+                        worksheet.Cell(currentRow, 16).Style.Font.Underline = XLFontUnderlineValues.Single;
+                    }
+                    // ================== FIM DA CORREÇÃO 2 ====================
 
                     currentRow++;
                 }
 
-                // ================== A MAGIA ACONTECE AQUI ==================
-                // Aplicar a formatação de CÉLULA correta a toda a coluna.
-
-                // Coluna da Data
                 worksheet.Column(2).Style.NumberFormat.Format = "dd/mm/yyyy";
-
-                // Colunas de Horas (Entrada/Saída)
-                // O formato "HH:mm" é para horas do dia.
                 worksheet.Column(3).Style.NumberFormat.Format = "HH:mm";
                 worksheet.Column(4).Style.NumberFormat.Format = "HH:mm";
                 worksheet.Column(5).Style.NumberFormat.Format = "HH:mm";
-                worksheet.Column(6).Style.NumberFormat.Format = "HH:mm";
-
-                // Coluna de Total de Horas
-                // O formato "[h]:mm" é especial. Permite que o Excel mostre mais de 24 horas,
-                // o que é essencial para somar totais de tempo.
+                worksheet.Column(6).Style.NumberFormat.Format = "HH:mm"; // Corrigido de Cell(1,6) para Column(6)
                 worksheet.Column(7).Style.NumberFormat.Format = "[h]:mm";
 
-                // Ajustar a largura das colunas ao conteúdo.
-                for (int i = 1; i <= 7; i++)
+                string formatCoordenadas = "0.000000";
+                worksheet.Column(8).Style.NumberFormat.Format = formatCoordenadas;
+                worksheet.Column(9).Style.NumberFormat.Format = formatCoordenadas;
+                worksheet.Column(10).Style.NumberFormat.Format = formatCoordenadas;
+                worksheet.Column(11).Style.NumberFormat.Format = formatCoordenadas;
+                worksheet.Column(12).Style.NumberFormat.Format = formatCoordenadas;
+                worksheet.Column(13).Style.NumberFormat.Format = formatCoordenadas;
+                worksheet.Column(14).Style.NumberFormat.Format = formatCoordenadas;
+                worksheet.Column(15).Style.NumberFormat.Format = formatCoordenadas;
+
+                for (int i = 1; i <= 16; i++)
                 {
                     worksheet.Column(i).AdjustToContents();
                 }
 
-                // Adicionar uma linha de Total no final
-                if (currentRow > 2) // Apenas se houver dados
+
+                if (currentRow > 2)
                 {
                     var totalRow = worksheet.Row(currentRow);
                     totalRow.Style.Font.Bold = true;
                     worksheet.Cell(currentRow, 6).SetValue("Total:");
-                    // Adiciona a FÓRMULA de soma para a coluna 7 (Total Horas)
                     worksheet.Cell(currentRow, 7).FormulaA1 = $"=SUM(G2:G{currentRow - 1})";
                 }
 
@@ -198,11 +247,9 @@ namespace SIGHR.Controllers
             }
         }
 
-
         //
         // Bloco: Edição de Registos de Ponto
         //
-
         [HttpGet]
         public async Task<IActionResult> Edit(long? id)
         {
@@ -211,19 +258,16 @@ namespace SIGHR.Controllers
             var horario = await _context.Horarios.Include(h => h.User).FirstOrDefaultAsync(h => h.Id == id);
             if (horario == null) return NotFound();
 
-            // ---- CORREÇÃO AQUI: Passa os DateTimes em UTC diretamente para o ViewModel ----
-            // O JavaScript na View irá tratar da conversão para a hora local.
             var viewModel = new EditHorarioViewModel
             {
                 Id = horario.Id,
                 NomeUtilizador = horario.User?.NomeCompleto ?? horario.User?.UserName,
-                Data = horario.Data, // A data em UTC
+                Data = horario.Data,
                 HoraEntrada = horario.HoraEntrada,
                 SaidaAlmoco = horario.SaidaAlmoco,
                 EntradaAlmoco = horario.EntradaAlmoco,
                 HoraSaida = horario.HoraSaida
             };
-            // --------------------------------------------------------------------------
 
             ViewData["Title"] = $"Editar Registo de {horario.Data.ToLocalTime():dd/MM/yyyy}";
             return View(viewModel);
@@ -242,36 +286,25 @@ namespace SIGHR.Controllers
                     var horarioNaBd = await _context.Horarios.FindAsync(id);
                     if (horarioNaBd == null) return NotFound();
 
-                    // ---- CORREÇÃO FINAL (SIMPLIFICADA) ----
-                    // 1. Obter a data do formulário. O Kind será 'Unspecified'.
                     var dataFormulario = viewModel.Data;
 
-                    // 2. Função auxiliar para combinar a data com a hora de forma segura.
                     DateTime CombineAndConvertToUtc(DateTime date, DateTime timeFromForm)
                     {
                         if (timeFromForm.TimeOfDay == TimeSpan.Zero && timeFromForm.Year == 1)
                         {
                             return DateTime.MinValue.ToUniversalTime();
                         }
-
-                        // CRUCIAL: Combina a data e a hora do formulário para criar um DateTime LOCAL.
                         var dateTimeLocal = new DateTime(date.Year, date.Month, date.Day,
-                                                         timeFromForm.Hour, timeFromForm.Minute, timeFromForm.Second,
-                                                         DateTimeKind.Local); // Força o Kind para Local (fuso do servidor)
-
-                        // Converte este novo DateTime local para UTC.
+                                                        timeFromForm.Hour, timeFromForm.Minute, timeFromForm.Second,
+                                                        DateTimeKind.Local);
                         return dateTimeLocal.ToUniversalTime();
                     }
 
-                    // Atribui a data diretamente, sem conversão de fuso horário.
-                    // O Entity Framework/PostgreSQL vai tratá-la corretamente como uma data UTC `00:00:00`.
-                    horarioNaBd.Data = DateTime.SpecifyKind(dataFormulario.Date, DateTimeKind.Utc); // <<< CORREÇÃO PRINCIPAL AQUI
-
+                    horarioNaBd.Data = DateTime.SpecifyKind(dataFormulario.Date, DateTimeKind.Utc);
                     horarioNaBd.HoraEntrada = CombineAndConvertToUtc(dataFormulario, viewModel.HoraEntrada);
                     horarioNaBd.SaidaAlmoco = CombineAndConvertToUtc(dataFormulario, viewModel.SaidaAlmoco);
                     horarioNaBd.EntradaAlmoco = CombineAndConvertToUtc(dataFormulario, viewModel.EntradaAlmoco);
                     horarioNaBd.HoraSaida = CombineAndConvertToUtc(dataFormulario, viewModel.HoraSaida);
-                    // ------------------------------------
 
                     _context.Update(horarioNaBd);
                     await _context.SaveChangesAsync();

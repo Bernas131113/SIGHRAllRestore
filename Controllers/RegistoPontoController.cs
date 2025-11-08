@@ -65,9 +65,12 @@ namespace SIGHR.Controllers
             return Ok(registoDoDia);
         }
 
+        //
+        // ================== MÉTODO 1 MODIFICADO ==================
+        //
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RegistarEntrada()
+        public async Task<IActionResult> RegistarEntrada([FromBody] PontoComLocalizacaoRequest dados)
         {
             var utilizadorId = GetCurrentUserId();
             if (string.IsNullOrEmpty(utilizadorId)) return Unauthorized(new { success = false, message = "Utilizador não autenticado." });
@@ -80,6 +83,11 @@ namespace SIGHR.Controllers
                 if (registoExistente.HoraEntrada == DateTime.MinValue.ToUniversalTime())
                 {
                     registoExistente.HoraEntrada = DateTime.UtcNow;
+
+                    // Guarda a localização
+                    registoExistente.LatitudeEntrada = dados.Latitude;
+                    registoExistente.LongitudeEntrada = dados.Longitude;
+
                     _context.Horarios.Update(registoExistente);
                     await _context.SaveChangesAsync();
                     _logger.LogInformation("RegistarEntrada: Entrada atualizada para o utilizador {UserId} às {HoraEntrada}.", utilizadorId, registoExistente.HoraEntrada);
@@ -96,7 +104,11 @@ namespace SIGHR.Controllers
                 HoraEntrada = DateTime.UtcNow,
                 HoraSaida = DateTime.MinValue.ToUniversalTime(),
                 EntradaAlmoco = DateTime.MinValue.ToUniversalTime(),
-                SaidaAlmoco = DateTime.MinValue.ToUniversalTime()
+                SaidaAlmoco = DateTime.MinValue.ToUniversalTime(),
+
+                // Guarda a localização
+                LatitudeEntrada = dados.Latitude,
+                LongitudeEntrada = dados.Longitude
             };
 
             _context.Horarios.Add(novoRegisto);
@@ -105,9 +117,12 @@ namespace SIGHR.Controllers
             return Ok(new { success = true, message = "Entrada registada com sucesso!", hora = novoRegisto.HoraEntrada.ToString("o") });
         }
 
+        //
+        // ================== MÉTODO 2 MODIFICADO ==================
+        //
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RegistarSaidaAlmoco()
+        public async Task<IActionResult> RegistarSaidaAlmoco([FromBody] PontoComLocalizacaoRequest dados)
         {
             var utilizadorId = GetCurrentUserId();
             if (string.IsNullOrEmpty(utilizadorId)) return Unauthorized(new { success = false, message = "Utilizador não autenticado." });
@@ -120,14 +135,22 @@ namespace SIGHR.Controllers
             if (registo.HoraSaida != DateTime.MinValue.ToUniversalTime()) return BadRequest(new { success = false, message = "Já registou a saída do dia." });
 
             registo.SaidaAlmoco = DateTime.UtcNow;
+
+            // Guarda a localização
+            registo.LatitudeSaidaAlmoco = dados.Latitude;
+            registo.LongitudeSaidaAlmoco = dados.Longitude;
+
             await _context.SaveChangesAsync();
             _logger.LogInformation("RegistarSaidaAlmoco: Saída para almoço para {UserId} às {SaidaAlmoco}.", utilizadorId, registo.SaidaAlmoco);
             return Ok(new { success = true, message = "Saída para almoço registada!", hora = registo.SaidaAlmoco.ToString("o") });
         }
 
+        //
+        // ================== MÉTODO 3 MODIFICADO ==================
+        //
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RegistarEntradaAlmoco()
+        public async Task<IActionResult> RegistarEntradaAlmoco([FromBody] PontoComLocalizacaoRequest dados)
         {
             var utilizadorId = GetCurrentUserId();
             if (string.IsNullOrEmpty(utilizadorId)) return Unauthorized(new { success = false, message = "Utilizador não autenticado." });
@@ -141,14 +164,22 @@ namespace SIGHR.Controllers
             if (registo.HoraSaida != DateTime.MinValue.ToUniversalTime()) return BadRequest(new { success = false, message = "Já registou a saída do dia." });
 
             registo.EntradaAlmoco = DateTime.UtcNow;
+
+            // Guarda a localização
+            registo.LatitudeEntradaAlmoco = dados.Latitude;
+            registo.LongitudeEntradaAlmoco = dados.Longitude;
+
             await _context.SaveChangesAsync();
             _logger.LogInformation("RegistarEntradaAlmoco: Entrada do almoço para {UserId} às {EntradaAlmoco}.", utilizadorId, registo.EntradaAlmoco);
             return Ok(new { success = true, message = "Entrada do almoço registada!", hora = registo.EntradaAlmoco.ToString("o") });
         }
 
+        //
+        // ================== MÉTODO 4 MODIFICADO ==================
+        //
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RegistarSaida()
+        public async Task<IActionResult> RegistarSaida([FromBody] PontoComLocalizacaoRequest dados)
         {
             var utilizadorId = GetCurrentUserId();
             if (string.IsNullOrEmpty(utilizadorId)) return Unauthorized(new { success = false, message = "Utilizador não autenticado." });
@@ -160,11 +191,19 @@ namespace SIGHR.Controllers
             if (registo.SaidaAlmoco != DateTime.MinValue.ToUniversalTime() && registo.EntradaAlmoco == DateTime.MinValue.ToUniversalTime()) return BadRequest(new { success = false, message = "Registe a entrada do almoço primeiro." });
 
             registo.HoraSaida = DateTime.UtcNow;
+
+            // Guarda a localização
+            registo.LatitudeSaida = dados.Latitude;
+            registo.LongitudeSaida = dados.Longitude;
+
             await _context.SaveChangesAsync();
             _logger.LogInformation("RegistarSaida: Saída do dia para {UserId} às {HoraSaida}.", utilizadorId, registo.HoraSaida);
             return Ok(new { success = true, message = "Saída registada com sucesso!", hora = registo.HoraSaida.ToString("o") });
         }
 
+        //
+        // ================== RESTO DO FICHEIRO (SEM MUDANÇAS) ==================
+        //
         [HttpGet]
         public async Task<IActionResult> MeuRegisto(DateTime? filtroData)
         {
@@ -206,11 +245,29 @@ namespace SIGHR.Controllers
                     EntradaAlmoco = h.EntradaAlmoco,
                     HoraSaida = h.HoraSaida,
                     TotalHorasTrabalhadas = totalTrabalhado > TimeSpan.Zero ? $"{(int)totalTrabalhado.TotalHours:D2}:{totalTrabalhado.Minutes:D2}" : "--:--"
+                    // NOTA: A localização não está a ser passada para este ViewModel.
+                    // Se quiseres mostrar a localização na tabela "MeuRegisto", terás de
+                    // 1. Adicionar as propriedades ao HorarioColaboradorViewModel.cs
+                    // 2. Preenchê-las aqui (ex: LatitudeEntrada = h.LatitudeEntrada)
+                    // 3. Mostrá-las na View MeuRegisto.cshtml
                 };
             }).ToList();
 
             ViewData["FiltroDataAtual"] = filtroData?.ToString("yyyy-MM-dd");
             return View(viewModels);
         }
+    }
+
+    //
+    // ================== NOVA CLASSE DTO ADICIONADA ==================
+    //
+    /// <summary>
+    /// Objeto de Transferência de Dados (DTO) para receber os dados de localização
+    /// vindos do JavaScript no corpo (body) do pedido HTTP POST.
+    /// </summary>
+    public class PontoComLocalizacaoRequest
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 }

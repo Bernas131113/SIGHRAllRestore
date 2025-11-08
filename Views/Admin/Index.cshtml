@@ -1,4 +1,6 @@
 ﻿@model IEnumerable<SIGHR.Models.ViewModels.HorarioAdminViewModel>
+@using System.Globalization
+
 @{
     ViewData["Title"] = "Registo de Entradas - Administração";
     Layout = "_LayoutAdmin";
@@ -6,12 +8,7 @@
 
 @section Styles {
     <style>
-        /*
-                 * Estilos CSS específicos para a página de Registo de Entradas.
-                 * Estes estilos ajustam a aparência da barra de pesquisa e dos botões,
-                 * garantindo que esta página tenha um visual distinto do CSS global, se necessário.
-                */
-
+        /* ... (os teus estilos CSS) ... */
         .action-buttons .btn,
         .action-buttons .download-btn {
             padding: 8px 15px;
@@ -82,14 +79,12 @@
             vertical-align: middle;
         }
 
-        /* Adiciona espaçamento entre os botões na célula da tabela */
         .table-actions-cell a {
-            margin-right: 5px; /* Espaço entre os botões */
+            margin-right: 5px;
         }
     </style>
 }
 
-<!-- Estrutura principal do conteúdo da página -->
 <div class="content">
     <div class="header">
         <h2>@ViewData["Title"]</h2>
@@ -122,6 +117,10 @@
                         <th>Entrada Almoço</th>
                         <th>Saída</th>
                         <th>Total de Horas</th>
+                        <th>Loc. Entrada</th>
+                        <th>Loc. S. Almoço</th>
+                        <th>Loc. E. Almoço</th>
+                        <th>Loc. Saída</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -131,15 +130,52 @@
                         <tr>
                             <td>@Html.DisplayFor(modelItem => item.NomeUtilizador)</td>
                             <td>@item.Data.ToLocalTime().ToString("dd/MM/yyyy")</td>
-
-                            <!-- ---- CORREÇÃO APLICADA AQUI ---- -->
                             <td class="utc-time" data-utc-time="@item.HoraEntrada.ToString("o")">--:--</td>
                             <td class="utc-time" data-utc-time="@item.SaidaAlmoco.ToString("o")">--:--</td>
                             <td class="utc-time" data-utc-time="@item.EntradaAlmoco.ToString("o")">--:--</td>
                             <td class="utc-time" data-utc-time="@item.HoraSaida.ToString("o")">--:--</td>
-                            <!-- ----------------------------------- -->
-
                             <td>@Html.DisplayFor(modelItem => item.TotalHorasTrabalhadas)</td>
+
+                            <td>
+                                @if (item.LatitudeEntrada.HasValue && item.LatitudeEntrada != 0)
+                                {
+                                    <a href="https://www.google.com/maps?q=@item.LatitudeEntrada!.Value.ToString("G", CultureInfo.InvariantCulture),@item.LongitudeEntrada!.Value.ToString("G", CultureInfo.InvariantCulture)" target="_blank">Ver Mapa</a>
+                                }
+                                else
+                                {
+                                    <text>N/D</text>
+                                }
+                            </td>
+                            <td>
+                                @if (item.LatitudeSaidaAlmoco.HasValue && item.LatitudeSaidaAlmoco != 0)
+                                {
+                                    <a href="https://www.google.com/maps?q=@item.LatitudeSaidaAlmoco!.Value.ToString("G", CultureInfo.InvariantCulture),@item.LongitudeSaidaAlmoco!.Value.ToString("G", CultureInfo.InvariantCulture)" target="_blank">Ver Mapa</a>
+                                }
+                                else
+                                {
+                                    <text>N/D</text>
+                                }
+                            </td>
+                            <td>
+                                @if (item.LatitudeEntradaAlmoco.HasValue && item.LatitudeEntradaAlmoco != 0)
+                                {
+                                    <a href="https://www.google.com/maps?q=@item.LatitudeEntradaAlmoco!.Value.ToString("G", CultureInfo.InvariantCulture),@item.LongitudeEntradaAlmoco!.Value.ToString("G", CultureInfo.InvariantCulture)" target="_blank">Ver Mapa</a>
+                                }
+                                else
+                                {
+                                    <text>N/D</text>
+                                }
+                            </td>
+                            <td>
+                                @if (item.LatitudeSaida.HasValue && item.LatitudeSaida != 0)
+                                {
+                                    <a href="https://www.google.com/maps?q=@item.LatitudeSaida!.Value.ToString("G", CultureInfo.InvariantCulture),@item.LongitudeSaida!.Value.ToString("G", CultureInfo.InvariantCulture)" target="_blank">Ver Mapa</a>
+                                }
+                                else
+                                {
+                                    <text>N/D</text>
+                                }
+                            </td>
                             <td class="table-actions-cell">
                                 <a asp-action="Edit" asp-route-id="@item.HorarioId" class="btn btn-sm btn-warning">Editar</a>
                             </td>
