@@ -28,6 +28,7 @@ namespace SIGHR.Areas.Identity.Data
         public virtual ICollection<Encomenda> Encomendas { get; set; } = new List<Encomenda>();
         public virtual ICollection<Ferias> Ferias { get; set; } = new List<Ferias>();
 
+        public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
         public bool IsActiveEmployee { get; set; } = true;
     }
 }

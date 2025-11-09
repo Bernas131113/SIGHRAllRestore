@@ -1,0 +1,233 @@
+﻿@model IEnumerable<SIGHR.Models.Feedback>
+@{
+    ViewData["Title"] = "Minhas Submissões";
+    Layout = "_LayoutCollaborator";
+}
+
+
+@section Styles {
+    <style>
+        .form-container {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+
+            .form-container h1 {
+                text-align: center;
+                margin-bottom: 25px;
+                font-size: 1.8rem;
+                color: #333;
+            }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: .5rem;
+            font-weight: 500;
+        }
+
+        .form-control, .form-select {
+            display: block;
+            width: 100%;
+            padding: .375rem .75rem;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: .25rem;
+        }
+
+        .item-requisicao {
+            border: 1px solid #eee;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+            .item-requisicao .row > div {
+                margin-bottom: 10px;
+            }
+
+        .text-danger {
+            color: #dc3545;
+            font-size: 0.9em;
+        }
+
+        .alert-success {
+            margin-bottom: 20px;
+        }
+
+        .mb-3 {
+            margin-bottom: 1rem !important;
+        }
+
+        /* --- ESTILOS 3D PARA OS BOTÕES --- */
+        .btn-custom-style {
+            display: inline-block;
+            padding: 10px 20px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 2px rgba(255,255,255,0.3), 0 4px 0 #444, 0 5px 5px rgba(0,0,0,0.2);
+            text-shadow: 0 -1px 0 rgba(0,0,0,0.3);
+            transition: all 0.1s ease-in-out;
+            font-weight: 500;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        /* Botão Verde (Submeter) */
+        .btn-green-custom {
+            background: linear-gradient(to bottom, #63d367, #4caf50);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 2px rgba(255,255,255,0.3), 0 4px 0 #388e3c, 0 5px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Botão Vermelho (Cancelar/Remover) */
+        .btn-red-custom, .remove-item-btn {
+            background: linear-gradient(to bottom, #ff7066, #f44336);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 2px rgba(255,255,255,0.3), 0 4px 0 #d32f2f, 0 5px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Botão Azul (Adicionar Item) */
+        .btn-blue-custom {
+            background: linear-gradient(to bottom, #5dade2, #3498db);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 2px rgba(255,255,255,0.3), 0 4px 0 #2980b9, 0 5px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Efeito de "pressionar" para todos os botões */
+       
+
+        .create-btn {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            background: linear-gradient(to bottom, #34c759, #28a745);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 2px rgba(255,255,255,0.3), 0 4px 0 #218838, 0 5px 5px rgba(0,0,0,0.2);
+            text-shadow: 0 -1px 0 rgba(0,0,0,0.3);
+            transition: all 0.1s ease;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+
+        /* --- CORREÇÃO APLICADA AQUI --- */
+        .remove-item-btn {
+            /* Sobrescreve o padding da classe .btn-custom-style */
+            padding: 8px 12px;
+            font-size: .875rem;
+            text-decoration: none;
+            color: white;
+            /* Garante que ocupe todo o espaço vertical disponível no seu container flex */
+            height: fit-content;
+            align-self: flex-end; /* Alinha na base, mas pode ser redundante com o container */
+        }
+        /* ------------------------------- */
+
+        .btn-group-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -15px;
+            margin-left: -15px;
+        }
+
+        .col-md-6, .col-md-7, .col-md-3, .col-md-2 {
+            position: relative;
+            width: 100%;
+            padding-right: 15px;
+            padding-left: 15px;
+        }
+
+        @@media (min-width: 768px) {
+            .col-md-6 {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+
+            .col-md-7 {
+                flex: 0 0 calc(7 / 12 * 100%);
+                max-width: calc(7 / 12 * 100%);
+            }
+
+            .col-md-3 {
+                flex: 0 0 25%;
+                max-width: 25%;
+            }
+
+            .col-md-2 {
+                flex: 0 0 calc(2 / 12 * 100%);
+                max-width: calc(2 / 12 * 100%);
+            }
+        }
+
+        .d-flex {
+            display: flex !important;
+        }
+
+        .align-items-end {
+            align-items: flex-end !important;
+        }
+    </style>
+}
+<div class="content">
+    <div class="header">
+        <h2>@ViewData["Title"]</h2>
+        <div class= "action-buttons">
+            <a asp-controller="Feedback" asp-action="Registar" class="btn create-btn">Nova Submissão</a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success" role="alert">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    @if (Model == null || !Model.Any())
+    {
+        <p class="no-records">Ainda não efetuou nenhuma submissão de feedback.</p>
+    }
+    else
+    {
+        <div class="table-responsive table-container">
+            <table class="table table-striped table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Título</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.DataRegisto.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@Html.DisplayFor(modelItem => item.TipoSubmissao)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Titulo)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Estado)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
