@@ -50,6 +50,9 @@
                 <li class="@(IsRouteActive(ViewContext, "Ferias", "Gestao") ? "active" : "")">
                     <a asp-controller="Ferias" asp-action="Gestao">Gestão de Férias</a>
                 </li>
+                <li class="@(IsControllerActive(ViewContext, "Feedback") ? "active" : "")">
+                    <a asp-controller="Feedback" asp-action="GestaoAdmin">Feedback Utilizadores</a>
+                </li>
             </ul>
         </nav>
         <form asp-controller="Admin" asp-action="Logout" method="post" id="adminLayoutLogoutForm">
