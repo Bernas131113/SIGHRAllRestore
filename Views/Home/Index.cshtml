@@ -13,23 +13,11 @@
             margin-right: auto;
             margin-bottom: 15px; /* Garante que o conteúdo inline ou inline-block seja centralizado */
         }
-        /* Se os botões forem display:block e você quer que eles sejam menores e centralizados: */
-        /*
-                #registo-ponto-area .btn {
-                    display: block;
-                    width: 80%; /* Ou um max-width fixo */
-        /* Para espaçamento */
-        /* }
-                */
-        /* Se os botões já são inline-block e você só quer mais espaço entre eles */
-        #registo-ponto-area .btn {
-            margin-top: 10px; /* Adiciona um pouco de espaço acima de cada botão */
-            margin-bottom: 10px; /* Adiciona um pouco de espaço abaixo de cada botão */
-            /* Se eles estiverem lado a lado e você quiser empilhá-los: */
-            /* display: block; */
-            /* margin-left: auto; */
-            /* margin-right: auto; */
-        }
+
+            #registo-ponto-area .btn {
+                margin-top: 10px; /* Adiciona um pouco de espaço acima de cada botão */
+                margin-bottom: 10px; /* Adiciona um pouco de espaço abaixo de cada botão */
+            }
 
         .update-notes-card {
             background-color: #f8f9fa;
@@ -67,6 +55,7 @@
                 margin-left: 20px;
             }
 
+            /* Adicionei este estilo para correções */
             .update-notes-card .fix {
                 display: list-item;
                 list-style-type: '✔️'; /* Emoji como marcador */
@@ -74,35 +63,40 @@
                 margin-left: 20px;
             }
 
-            .update-notes-card .soon {
-                display: list-item;
-                list-style-type: '🔜'; /* Emoji como marcador */
-                padding-left: 10px;
-                margin-left: 20px;
-            }
-
     </style>
 </head>
 <body>
-    <!-- O contentor 'content-wrapper' pode ser estilizado no login.css para gerir o layout geral. -->
     <div class="content-wrapper">
-        <!-- Contentor para o logótipo, facilitando o seu alinhamento. -->
         <div class="logo-container">
             <a asp-controller="Home" asp-action="Index">
                 <img src="~/images/AllRestore-Logotipo-T180px.png" alt="Logótipo SIGHR" class="logo">
             </a>
         </div>
 
-        <!-- Área de seleção do tipo de utilizador. -->
         <div id="registo-ponto-area">
             <h1>Bem-vindo ao SIGHR</h1>
             <p>Selecione o seu perfil para continuar:</p>
 
-            <!-- Botões de navegação para as respetivas páginas de login. -->
             <a href="~/Identity/Account/AdminLogin" class="btn btn-green">Administrador</a>
             <a href="~/Identity/Account/CollaboratorPinLogin" class="btn btn-blue">Colaborador</a>
         </div>
     </div>
 
+    <div class="update-notes-card">
+        <h4>Atualizações</h4>
+
+        <p class="version-info">(9 de Novembro, 2025)</p>
+        <p class="version-info">Adicionado/Melhorado</p>
+        <ul>
+            
+            <li class="feature">Login facial ⚡ muito mais rápido e estável.</li>
+            <li class="feature">Notificações por e-mail 📧 para novas encomendas.</li>
+
+            <li class="feature">Filtros por intervalo de datas 📅 (De/Até) na gestão de ponto.</li>
+
+            <li class="fix">Correção de bugs de fuso horário 🕑 nos filtros de data.</li>
+            <li class="fix">Correções de estabilidade no deploy e no servidor.</li>
+        </ul>
+    </div>
 </body>
 </html>

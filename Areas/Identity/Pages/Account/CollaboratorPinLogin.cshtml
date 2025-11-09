@@ -132,6 +132,10 @@
             let modelsLoaded = false;
             let stream = null;
 
+            // ================== ALTERAÇÃO 1: Variável de controlo ==================
+            let isVerifying = false; // Impede o envio de múltiplos pedidos
+            // ================== FIM DA ALTERAÇÃO 1 ==================
+
             async function loadModelsOnPageLoad() {
                 startBtn.disabled = true;
                 startBtn.textContent = 'A preparar câmara...';
@@ -180,10 +184,13 @@
                 pinLoginForm.style.display = 'block';
                 divider.style.display = 'flex';
                 startBtn.style.display = 'block';
+                isVerifying = false; // Reinicia o controlo
             }
 
+            // ================== ALTERAÇÃO 2: Lógica de verificação reescrita ==================
             async function runVerificationCycle() {
-                if (videoEl.paused || videoEl.ended || !modelsLoaded) {
+                // Se já estivermos a verificar no servidor, não fazemos nada
+                if (videoEl.paused || videoEl.ended || !modelsLoaded || isVerifying) {
                     return;
                 }
 
@@ -192,38 +199,60 @@
                 const ctx = canvasEl.getContext('2d');
                 ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
 
-                const detection = await faceapi.detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                // Otimização de velocidade mantida
+                const detection = await faceapi.detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
                     .withFaceLandmarks().withFaceDescriptor();
 
                 if (detection) {
+                    // 1. Encontrámos um rosto! Desenha a caixa.
                     faceapi.draw.drawDetections(canvasEl, faceapi.resizeResults(detection, displaySize));
+
+                    // 2. Bloqueia novos pedidos e avisa o utilizador
+                    isVerifying = true;
                     statusEl.textContent = "Rosto detetado. A verificar...";
+
+                    // 3. Pára o loop de deteção
+                    clearInterval(verificationInterval);
 
                     const descriptor = detection.descriptor;
                     const descriptorBytes = new Uint8Array(descriptor.buffer);
                     const base64String = btoa(String.fromCharCode.apply(null, descriptorBytes));
 
                     try {
+                        // 4. Envia UM ÚNICO pedido para o servidor
                         const response = await fetch('/api/face-auth/verify', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ liveFaceDescriptorBase64: base64String })
+                            body: JSON.stringify({
+                                liveFaceDescriptorBase64: base64String
+                            })
                         });
+
                         const data = await response.json();
+
                         if (response.ok && data.success) {
+                            // Sucesso!
                             statusEl.textContent = "Login bem-sucedido! A redirecionar...";
-                            clearInterval(verificationInterval);
+                            // (Não limpamos o intervalo, já foi limpo)
                             window.location.href = data.redirectUrl;
                         } else {
+                            // Falhou. Avisa o utilizador e reinicia a deteção.
                             statusEl.textContent = "Rosto não reconhecido. Tente novamente.";
+                            isVerifying = false; // Desbloqueia
+                            verificationInterval = setInterval(runVerificationCycle, 500); // Reinicia o loop
                         }
                     } catch (err) {
-                        statusEl.textContent = "Erro de comunicação. Verifique a consola.";
+                        statusEl.textContent = "Erro de comunicação. Tente novamente.";
+                        console.error(err);
+                        isVerifying = false; // Desbloqueia
+                        verificationInterval = setInterval(runVerificationCycle, 500); // Reinicia o loop
                     }
                 } else {
+                    // Nenhum rosto detetado, continua a procurar
                     statusEl.textContent = "À procura de um rosto...";
                 }
             }
+            // ================== FIM DA ALTERAÇÃO 2 ==================
 
             if (startBtn) {
                 startBtn.addEventListener('click', async () => {
@@ -235,7 +264,9 @@
                     faceContainer.style.display = 'block';
 
                     if (await startVideo()) {
-                        verificationInterval = setInterval(runVerificationCycle, 1500);
+                        // Otimização de velocidade mantida (500ms)
+                        isVerifying = false; // Garante que o controlo está a zeros
+                        verificationInterval = setInterval(runVerificationCycle, 500);
                     } else {
                         stopVideoAndVerification();
                     }

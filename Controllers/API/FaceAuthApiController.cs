@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿// Controllers/Api/FaceAuthApiController.cs
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,14 @@ using System.Threading.Tasks;
 namespace SIGHR.Controllers.Api
 {
     public class FaceRegistrationRequest { public string? FacialProfileBase64 { get; set; } }
-    public class FaceVerificationRequest { public string? LiveFaceDescriptorBase64 { get; set; } }
+
+    // ================== ALTERAÇÃO 1: Voltámos ao Request original ==================
+    public class FaceVerificationRequest
+    {
+        public string? LiveFaceDescriptorBase64 { get; set; }
+    }
+    // ================== FIM DA ALTERAÇÃO 1 ==================
+
 
     [Route("api/face-auth")]
     [ApiController]
@@ -56,6 +64,8 @@ namespace SIGHR.Controllers.Api
             return BadRequest(new { message = "Erro ao apagar o perfil facial." });
         }
 
+
+        // ================== ALTERAÇÃO 2: Voltámos à lógica 1-para-N (automática) ==================
         [HttpPost("verify")]
         [AllowAnonymous]
         public async Task<IActionResult> VerifyAndLogin([FromBody] FaceVerificationRequest request)
@@ -74,10 +84,10 @@ namespace SIGHR.Controllers.Api
 
             const double faceDistanceThreshold = 0.5;
 
-            // OTIMIZAÇÃO: Selecionar apenas os dados necessários da base de dados.
+            // Lógica 1-para-N (lenta, mas automática)
             var usersWithProfiles = await _userManager.Users
                 .Where(u => u.FacialProfile != null && u.FacialProfile.Length == 512)
-                .Select(u => new { u.Id, u.UserName, u.Tipo, u.FacialProfile }) // Projeta apenas os dados essenciais
+                .Select(u => new { u.Id, u.UserName, u.Tipo, u.FacialProfile })
                 .ToListAsync();
 
             Console.WriteLine($"[DEBUG] Perfis faciais válidos na BD: {usersWithProfiles.Count}");
@@ -91,9 +101,8 @@ namespace SIGHR.Controllers.Api
 
                 if (distance < faceDistanceThreshold)
                 {
-                    // Correspondência encontrada! Agora, busca o objeto completo do utilizador para fazer o login.
                     var userToLogin = await _userManager.FindByIdAsync(userProjection.Id);
-                    if (userToLogin == null) continue; // Segurança extra caso o user seja apagado durante o processo
+                    if (userToLogin == null) continue;
 
                     const string authenticationScheme = "CollaboratorLoginScheme";
 
@@ -108,6 +117,8 @@ namespace SIGHR.Controllers.Api
 
             return Unauthorized(new { success = false, message = "Rosto não reconhecido." });
         }
+        // ================== FIM DA ALTERAÇÃO 2 ==================
+
 
         private float[] ToFloatArray(byte[] byteArray)
         {

@@ -13,6 +13,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using SIGHR.Areas.Identity.Data;
+using SIGHR.Services;
 
 namespace SIGHR.Controllers
 {
@@ -22,6 +23,8 @@ namespace SIGHR.Controllers
         private readonly SIGHRContext _context;
         private readonly UserManager<SIGHRUser> _userManager;
         private readonly ILogger<EncomendasController> _logger;
+        private readonly IEmailService _emailService;
+
 
         private static readonly List<SelectListItem> ListaDeMateriaisFixa = new List<SelectListItem>
         {
@@ -38,11 +41,15 @@ namespace SIGHR.Controllers
             new SelectListItem { Value = "Cal hidráulica", Text = "Cal hidráulica" }
         };
 
-        public EncomendasController(SIGHRContext context, UserManager<SIGHRUser> userManager, ILogger<EncomendasController> logger)
+        public EncomendasController(SIGHRContext context,
+                                    UserManager<SIGHRUser> userManager,
+                                    ILogger<EncomendasController> logger,
+                                    IEmailService emailService)
         {
             _context = context;
             _userManager = userManager;
             _logger = logger;
+            _emailService = emailService;
         }
 
         [HttpGet]
@@ -166,6 +173,39 @@ namespace SIGHR.Controllers
                 try
                 {
                     await _context.SaveChangesAsync();
+
+                    // ================== ALTERAÇÃO 3: Enviar o e-mail para a nova lista ==================
+                    try
+                    {
+                        var encomendaParaEmail = await _context.Encomendas
+                            .Include(e => e.User)
+                            .Include(e => e.Requisicoes!)
+                                .ThenInclude(r => r.Material)
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(e => e.Id == novaEncomenda.Id);
+
+                        if (encomendaParaEmail != null)
+                        {
+                            // 1. Cria a lista de destinatários
+                            var recipientList = new List<string>
+                            {
+                                "ialves@allrestore.pt",
+                                "bbexiga@allrestore.pt",
+                                "spequeno@allrestore.pt",
+                                "pleitao@allrestore.pt"
+                            };
+
+                            // 2. Envia a notificação para a lista
+                            await _emailService.SendEncomendaNotificationAsync(encomendaParaEmail, recipientList);
+                            _logger.LogInformation("Notificação de encomenda enviada para {Count} destinatários.", recipientList.Count);
+                        }
+                    }
+                    catch (Exception exEmail)
+                    {
+                        _logger.LogError(exEmail, "Erro ao tentar enviar o e-mail da encomenda.");
+                    }
+                    // ================== FIM DA ALTERAÇÃO 3 ==================
+
                     TempData["SuccessMessage"] = "Encomenda registada com sucesso!";
                     return RedirectToAction("MinhasEncomendas");
                 }

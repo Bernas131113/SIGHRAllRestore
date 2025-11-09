@@ -8,7 +8,7 @@
 
 @section Styles {
     <style>
-        /* ... (os teus estilos CSS) ... */
+        /* ... (os teus estilos CSS existentes) ... */
         .action-buttons .btn,
         .action-buttons .download-btn {
             padding: 8px 15px;
@@ -25,44 +25,55 @@
             margin-bottom: 20px;
             margin-top: 15px;
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: wrap; /* Permite que os filtros passem para a linha de baixo se não houver espaço */
             gap: 10px;
             align-items: center;
         }
 
-            .search-bar input[type="text"],
-            .search-bar input[type="date"],
-            .search-bar .form-control {
-                padding: .375rem .75rem;
-                font-size: 1rem;
-                line-height: 1.5;
-                color: #495057;
-                background-color: #fff;
-                background-clip: padding-box;
-                border: 1px solid #ced4da;
-                border-radius: .25rem;
-                transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-                flex-grow: 1;
-                min-width: 180px;
+        /* ================== NOVO ESTILO ================== */
+        /* Adiciona um 'label' visual para os filtros de data */
+        .date-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-wrap: nowrap; /* Impede que o label e o input se partam */
+        }
+        /* ================== FIM DO NOVO ESTILO ================== */
+
+
+        .search-bar input[type="text"],
+        .search-bar input[type="date"],
+        .search-bar .form-control {
+            padding: .375rem .75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #495057;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            border-radius: .25rem;
+            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+            flex-grow: 1;
+            min-width: 180px;
+        }
+
+            .search-bar input[type="text"]:focus,
+            .search-bar input[type="date"]:focus {
+                border-color: #86b7fe;
+                outline: 0;
+                box-shadow: 0 0 0 .2rem rgba(13,110,253,.25);
             }
 
-                .search-bar input[type="text"]:focus,
-                .search-bar input[type="date"]:focus {
-                    border-color: #86b7fe;
-                    outline: 0;
-                    box-shadow: 0 0 0 .2rem rgba(13,110,253,.25);
-                }
 
-
-            .search-bar .filter-btn {
-                padding: .375rem .75rem;
-                font-size: 1rem;
-                border-radius: .25rem;
-                color: #fff;
-                border: 1px solid transparent;
-                cursor: pointer;
-                line-height: 1.5;
-            }
+        .search-bar .filter-btn {
+            padding: .375rem .75rem;
+            font-size: 1rem;
+            border-radius: .25rem;
+            color: #fff;
+            border: 1px solid transparent;
+            cursor: pointer;
+            line-height: 1.5;
+        }
 
         .filter-btn.clear {
             background-color: #6c757d;
@@ -94,12 +105,22 @@
     </div>
 
     <form method="get" asp-action="Index" asp-controller="Admin" class="search-bar" id="formFiltrosHorarios">
+
         <input type="text" name="filtroNome" id="inputFiltroNomeAdmin" value="@ViewData["FiltroNomeAtual"]" placeholder="Pesquisar por nome do utilizador" class="form-control" />
-        <input type="date" name="filtroData" id="inputFiltroDataAdmin" value="@ViewData["FiltroDataAtual"]" class="form-control" />
+
+        <div class="date-filter-group">
+            <label for="inputFiltroDataInicio" class="form-label" style="margin-bottom:0; white-space:nowrap;">De:</label>
+            <input type="date" name="filtroDataInicio" id="inputFiltroDataInicio" value="@ViewData["FiltroDataInicioAtual"]" class="form-control" />
+        </div>
+
+        <div class="date-filter-group">
+            <label for="inputFiltroDataFim" class="form-label" style="margin-bottom:0; white-space:nowrap;">Até:</label>
+            <input type="date" name="filtroDataFim" id="inputFiltroDataFim" value="@ViewData["FiltroDataFimAtual"]" class="form-control" />
+        </div>
+
         <button type="submit" class="btn filter-btn apply">Filtrar</button>
         <a asp-action="Index" asp-controller="Admin" class="btn filter-btn clear">Limpar</a>
     </form>
-
     @if (Model == null || !Model.Any())
     {
         <p class="no-records">Nenhum registo de ponto encontrado para os filtros aplicados.</p>
@@ -189,18 +210,31 @@
 
 @section Scripts {
     <script type="text/javascript">
+
+        // ================== JAVASCRIPT MODIFICADO ==================
         function downloadHorariosExcelComFiltros() {
+            // 1. Ler os 3 campos de filtro
             const filtroNomeInput = document.getElementById('inputFiltroNomeAdmin');
-            const filtroDataInput = document.getElementById('inputFiltroDataAdmin');
+            const filtroDataInicioInput = document.getElementById('inputFiltroDataInicio'); // Novo
+            const filtroDataFimInput = document.getElementById('inputFiltroDataFim');     // Novo
+
             const filtroNome = filtroNomeInput ? filtroNomeInput.value : '';
-            const filtroData = filtroDataInput ? filtroDataInput.value : '';
+            const filtroDataInicio = filtroDataInicioInput ? filtroDataInicioInput.value : ''; // Novo
+            const filtroDataFim = filtroDataFimInput ? filtroDataFimInput.value : '';         // Novo
+
             let url = '@Url.Action("DownloadHorariosExcel", "Admin")';
             const params = new URLSearchParams();
+
+            // 2. Adicionar os 3 parâmetros à URL
             if (filtroNome) params.append('filtroNome', filtroNome);
-            if (filtroData) params.append('filtroData', filtroData);
+            if (filtroDataInicio) params.append('filtroDataInicio', filtroDataInicio); // Novo
+            if (filtroDataFim) params.append('filtroDataFim', filtroDataFim);         // Novo
+
             if (params.toString()) url += '?' + params.toString();
             window.location.href = url;
         }
+        // ================== FIM DA MODIFICAÇÃO ==================
+
          document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.utc-time').forEach(cell => {
                 const utcTimeString = cell.getAttribute('data-utc-time');
