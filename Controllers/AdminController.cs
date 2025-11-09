@@ -1,19 +1,20 @@
 ﻿// Controllers/AdminController.cs
+using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using SIGHR.Areas.Identity.Data;
 using SIGHR.Models;
 using SIGHR.Models.ViewModels;
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using ClosedXML.Excel;
-using SIGHR.Areas.Identity.Data;
-using System.Globalization;
 
 namespace SIGHR.Controllers
 {
@@ -31,7 +32,7 @@ namespace SIGHR.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? filtroNome, DateTime? filtroData)
+        public async Task<IActionResult> Index(string? filtroNome, DateTime? filtroDataInicio, DateTime? filtroDataFim)
         {
             ViewData["Title"] = "Gestão de Registos de Ponto";
             IQueryable<Horario> query = _context.Horarios.Include(h => h.User);
@@ -41,11 +42,24 @@ namespace SIGHR.Controllers
                 query = query.Where(h => h.User != null && ((h.User.UserName != null && h.User.UserName.Contains(filtroNome)) || (h.User.NomeCompleto != null && h.User.NomeCompleto.Contains(filtroNome))));
             }
 
-            if (filtroData.HasValue)
+            // ================== CORREÇÃO 1 (Index - Início) ==================
+            if (filtroDataInicio.HasValue)
             {
-                var filtroDataUtc = filtroData.Value.ToUniversalTime();
-                query = query.Where(h => h.Data.Date == filtroDataUtc.Date);
+                // Força a data do filtro a ser tratada como UTC 00:00:00
+                var filtroDataInicioUtc = DateTime.SpecifyKind(filtroDataInicio.Value.Date, DateTimeKind.Utc);
+                query = query.Where(h => h.Data >= filtroDataInicioUtc);
             }
+            // ================== FIM DA CORREÇÃO 1 ==================
+
+            // ================== CORREÇÃO 2 (Index - Fim) ==================
+            if (filtroDataFim.HasValue)
+            {
+                // Força a data do filtro a ser tratada como UTC 00:00:00
+                var filtroDataFimUtc = DateTime.SpecifyKind(filtroDataFim.Value.Date, DateTimeKind.Utc);
+                query = query.Where(h => h.Data <= filtroDataFimUtc);
+            }
+            // ================== FIM DA CORREÇÃO 2 ==================
+
 
             var horarios = await query.OrderByDescending(h => h.Data).ThenBy(h => h.User != null ? h.User.UserName ?? "" : "").ThenBy(h => h.HoraEntrada).ToListAsync();
 
@@ -86,20 +100,34 @@ namespace SIGHR.Controllers
             }).ToList();
 
             ViewData["FiltroNomeAtual"] = filtroNome;
-            ViewData["FiltroDataAtual"] = filtroData?.ToString("yyyy-MM-dd");
+            ViewData["FiltroDataInicioAtual"] = filtroDataInicio?.ToString("yyyy-MM-dd");
+            ViewData["FiltroDataFimAtual"] = filtroDataFim?.ToString("yyyy-MM-dd");
+
             return View(viewModels);
         }
 
         [HttpGet]
-        public async Task<IActionResult> DownloadHorariosExcel(string? filtroNome, DateTime? filtroData)
+        public async Task<IActionResult> DownloadHorariosExcel(string? filtroNome, DateTime? filtroDataInicio, DateTime? filtroDataFim)
         {
             IQueryable<Horario> query = _context.Horarios.Include(h => h.User);
             if (!string.IsNullOrEmpty(filtroNome)) query = query.Where(h => h.User != null && ((h.User.UserName != null && h.User.UserName.Contains(filtroNome)) || (h.User.NomeCompleto != null && h.User.NomeCompleto.Contains(filtroNome))));
-            if (filtroData.HasValue)
+
+            // ================== CORREÇÃO 3 (Excel - Início) ==================
+            if (filtroDataInicio.HasValue)
             {
-                var filtroDataUtc = filtroData.Value.ToUniversalTime();
-                query = query.Where(h => h.Data.Date == filtroDataUtc.Date);
+                var filtroDataInicioUtc = DateTime.SpecifyKind(filtroDataInicio.Value.Date, DateTimeKind.Utc);
+                query = query.Where(h => h.Data >= filtroDataInicioUtc);
             }
+            // ================== FIM DA CORREÇÃO 3 ==================
+
+            // ================== CORREÇÃO 4 (Excel - Fim) ==================
+            if (filtroDataFim.HasValue)
+            {
+                var filtroDataFimUtc = DateTime.SpecifyKind(filtroDataFim.Value.Date, DateTimeKind.Utc);
+                query = query.Where(h => h.Data <= filtroDataFimUtc);
+            }
+            // ================== FIM DA CORREÇÃO 4 ==================
+
 
             var horariosParaExportar = await query
                 .OrderByDescending(h => h.Data)
@@ -175,11 +203,6 @@ namespace SIGHR.Controllers
                     }
                     worksheet.Cell(currentRow, 7).SetValue(totalTrabalhado);
 
-
-                    // ================== CORREÇÃO 1: ERROS CS1503 ==================
-                    // A solução correta é simplesmente passar o double? (nullable)
-                    // A biblioteca ClosedXML sabe como lidar com ele.
-
                     worksheet.Cell(currentRow, 8).SetValue(item.LatitudeEntrada);
                     worksheet.Cell(currentRow, 9).SetValue(item.LongitudeEntrada);
                     worksheet.Cell(currentRow, 10).SetValue(item.LatitudeSaidaAlmoco);
@@ -189,21 +212,14 @@ namespace SIGHR.Controllers
                     worksheet.Cell(currentRow, 14).SetValue(item.LatitudeSaida);
                     worksheet.Cell(currentRow, 15).SetValue(item.LongitudeSaida);
 
-                    // ================== FIM DA CORREÇÃO 1 ====================
-
-
-                    // ================== CORREÇÃO 2: AVISO CS8629 ==================
                     if (item.LatitudeEntrada.HasValue && item.LatitudeEntrada != 0)
                     {
-                        // Adicionamos '!' para informar o compilador que, dentro deste 'if',
-                        // sabemos que .Value não será nulo.
                         var lat = item.LatitudeEntrada!.Value.ToString("G", CultureInfo.InvariantCulture);
                         var lon = item.LongitudeEntrada!.Value.ToString("G", CultureInfo.InvariantCulture);
                         worksheet.Cell(currentRow, 16).FormulaA1 = $"HYPERLINK(\"https://www.google.com/maps?q={lat},{lon}\", \"Ver Mapa\")";
                         worksheet.Cell(currentRow, 16).Style.Font.FontColor = XLColor.Blue;
                         worksheet.Cell(currentRow, 16).Style.Font.Underline = XLFontUnderlineValues.Single;
                     }
-                    // ================== FIM DA CORREÇÃO 2 ====================
 
                     currentRow++;
                 }
@@ -212,7 +228,7 @@ namespace SIGHR.Controllers
                 worksheet.Column(3).Style.NumberFormat.Format = "HH:mm";
                 worksheet.Column(4).Style.NumberFormat.Format = "HH:mm";
                 worksheet.Column(5).Style.NumberFormat.Format = "HH:mm";
-                worksheet.Column(6).Style.NumberFormat.Format = "HH:mm"; // Corrigido de Cell(1,6) para Column(6)
+                worksheet.Column(6).Style.NumberFormat.Format = "HH:mm";
                 worksheet.Column(7).Style.NumberFormat.Format = "[h]:mm";
 
                 string formatCoordenadas = "0.000000";

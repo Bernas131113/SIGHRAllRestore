@@ -19,6 +19,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime;
 using NodaTime;
 using System.Linq;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 //
@@ -99,6 +100,7 @@ builder.Services.AddControllersWithViews().AddJsonOptions(options => options.Jso
 builder.Services.AddAntiforgery(options => { options.HeaderName = "RequestVerificationToken"; });
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
