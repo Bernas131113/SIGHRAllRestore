@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SIGHR.Models; // Namespace das suas entidades (Horario, Material, etc.)
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+
 
 namespace SIGHR.Areas.Identity.Data
 {
@@ -10,7 +12,7 @@ namespace SIGHR.Areas.Identity.Data
     /// Funciona como a ponte principal entre as suas classes C# (entidades) e a base de dados.
     /// Herda de IdentityDbContext para incluir toda a funcionalidade do ASP.NET Core Identity.
     /// </summary>
-    public class SIGHRContext : IdentityDbContext<SIGHRUser> // Usa a classe de utilizador personalizada SIGHRUser.
+    public class SIGHRContext : IdentityDbContext<SIGHRUser>, IDataProtectionKeyContext
     {
         public SIGHRContext(DbContextOptions<SIGHRContext> options)
             : base(options)
@@ -31,6 +33,9 @@ namespace SIGHR.Areas.Identity.Data
         public DbSet<Ferias> Ferias { get; set; }
 
         public DbSet<Feedback> Feedbacks { get; set; }
+
+
+        public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
         // Adicione aqui quaisquer outros DbSets de entidades que venha a criar.
 
