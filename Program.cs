@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime;
 using NodaTime;
 using System.Linq;
+using Microsoft.AspNetCore.DataProtection;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,6 +30,10 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("A connection string 'DefaultConnection' não foi encontrada.");
 builder.Services.AddDbContext<SIGHRContext>(options => options.UseNpgsql(connectionString));
 
+
+
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<SIGHRContext>();
 //
 // Bloco 2: Configuração do ASP.NET Core Identity
 //
