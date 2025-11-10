@@ -2,24 +2,21 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using SIGHR.Models;
-using SIGHR.Areas.Identity.Data; // <-- ADICIONA ESTE
-using Microsoft.EntityFrameworkCore; // <-- ADICIONA ESTE
+using SIGHR.Areas.Identity.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace SIGHR.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly SIGHRContext _context; // <-- ADICIONA ESTE
+        private readonly SIGHRContext _context;
 
-        // ================== ALTERAÇÃO 1: Atualiza o Construtor ==================
-        public HomeController(ILogger<HomeController> logger, SIGHRContext context) // <-- ADICIONA O context
+        public HomeController(ILogger<HomeController> logger, SIGHRContext context)
         {
             _logger = logger;
-            _context = context; // <-- ADICIONA ESTE
+            _context = context;
         }
-        // ================== FIM DA ALTERAÇÃO 1 ==================
-
 
         public IActionResult Index()
         {
@@ -31,10 +28,11 @@ namespace SIGHR.Controllers
             return View();
         }
 
-        // ================== ALTERAÇÃO 2: Adiciona este novo método ==================
-        [HttpGet]
-        [Route("/healthcheck")] // Define um URL fácil de usar: https://.../healthcheck
+        // ================== ALTERAÇÃO CRÍTICA AQUI ==================
+        [AcceptVerbs("GET", "HEAD")] // <-- MUDADO DE [HttpGet]
+        [Route("/healthcheck")]
         public async Task<IActionResult> HealthCheck()
+        // ================== FIM DA ALTERAÇÃO ==================
         {
             try
             {
@@ -52,7 +50,6 @@ namespace SIGHR.Controllers
                 return StatusCode(500, "Health Check falhou");
             }
         }
-        // ================== FIM DA ALTERAÇÃO 2 ==================
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
