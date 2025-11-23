@@ -50,10 +50,6 @@
             background-color: #f9f9f9;
         }
 
-            .item-requisicao .row > div {
-                margin-bottom: 10px;
-            }
-
         .text-danger {
             color: #dc3545;
             font-size: 0.9em;
@@ -67,7 +63,7 @@
             margin-bottom: 1rem !important;
         }
 
-        /* --- ESTILOS 3D PARA OS BOTÕES --- */
+        /* Botões */
         .btn-custom-style {
             display: inline-block;
             padding: 10px 20px;
@@ -83,39 +79,29 @@
             text-align: center;
         }
 
-        /* Botão Verde (Submeter) */
         .btn-green-custom {
             background: linear-gradient(to bottom, #63d367, #4caf50);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 2px rgba(255,255,255,0.3), 0 4px 0 #388e3c, 0 5px 5px rgba(0,0,0,0.2);
         }
 
-        /* Botão Vermelho (Cancelar/Remover) */
         .btn-red-custom, .remove-item-btn {
             background: linear-gradient(to bottom, #ff7066, #f44336);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 2px rgba(255,255,255,0.3), 0 4px 0 #d32f2f, 0 5px 5px rgba(0,0,0,0.2);
         }
 
-        /* Botão Azul (Adicionar Item) */
         .btn-blue-custom {
             background: linear-gradient(to bottom, #5dade2, #3498db);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 2px rgba(255,255,255,0.3), 0 4px 0 #2980b9, 0 5px 5px rgba(0,0,0,0.2);
         }
 
-        /* Efeito de "pressionar" para todos os botões */
-
-
-        /* --- CORREÇÃO APLICADA AQUI --- */
         .remove-item-btn {
-            /* Sobrescreve o padding da classe .btn-custom-style */
             padding: 8px 12px;
             font-size: .875rem;
             text-decoration: none;
             color: white;
-            /* Garante que ocupe todo o espaço vertical disponível no seu container flex */
             height: fit-content;
-            align-self: flex-end; /* Alinha na base, mas pode ser redundante com o container */
+            align-self: flex-end;
         }
-        /* ------------------------------- */
 
         .btn-group-actions {
             display: flex;
@@ -167,6 +153,15 @@
         .align-items-end {
             align-items: flex-end !important;
         }
+
+        .toggle-material-wrapper {
+            font-size: 0.85rem;
+            margin-top: 5px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
     </style>
 }
 
@@ -200,22 +195,39 @@
             {
                 <div class="item-requisicao">
                     <div class="row">
-                        <div class="col-md-7 form-group">
-                            <label asp-for="ItensRequisicao[i].NomeMaterialOuId" class="form-label">Material</label>
-                            <select asp-for="ItensRequisicao[i].NomeMaterialOuId" asp-items="Model.MateriaisDisponiveis" class="form-select">
+                        <div class="col-md-7 form-group material-selection-group">
+                            <label class="form-label">Material</label>
+
+                            <select name="ItensRequisicao[@i].NomeMaterialOuId" class="form-select material-dropdown">
                                 <option value="">-- Selecione o Material --</option>
+                                @if (Model.MateriaisDisponiveis != null)
+                                {
+                                    @foreach (var opt in Model.MateriaisDisponiveis)
+                                    {
+                                        <option value="@opt.Value">@opt.Text</option>
+                                    }
+                                }
                             </select>
+
+                            <input type="text" name="ItensRequisicao[@i].NomeMaterialOuId" class="form-control material-input" placeholder="Digite o nome do material..." style="display:none;" disabled />
+
+                            <div class="toggle-material-wrapper">
+                                <input type="checkbox" class="toggle-material-checkbox" id="toggle_@i">
+                                <label for="toggle_@i" style="cursor:pointer;">Outro / Não listado</label>
+                            </div>
+
                             <span asp-validation-for="ItensRequisicao[i].NomeMaterialOuId" class="text-danger"></span>
                         </div>
+
                         <div class="col-md-3 form-group">
                             <label asp-for="ItensRequisicao[i].Quantidade" class="form-label"></label>
                             <input asp-for="ItensRequisicao[i].Quantidade" type="number" min="1" value="1" class="form-control" />
                             <span asp-validation-for="ItensRequisicao[i].Quantidade" class="text-danger"></span>
                         </div>
+
                         <div class="col-md-2 d-flex align-items-end form-group">
                             @if (i > 0 || Model.ItensRequisicao.Count > 1)
                             {
-                                <!-- A classe .btn-custom-style foi removida para usar o padding específico do .remove-item-btn -->
                                 <button type="button" class="remove-item-btn" onclick="removerItemRequisicaoEncomenda(this)">Remover</button>
                             }
                         </div>
@@ -236,51 +248,89 @@
     <partial name="_ValidationScriptsPartial" />
     <script type="text/javascript">
         var itemIndexEncomenda = parseInt('@(Model.ItensRequisicao?.Count ?? 0)');
-        var materiaisDisponiveisParaJs_Encomenda = [];
+
+        var optionsHtml = '<option value="">-- Selecione o Material --</option>';
+
         @if (Model.MateriaisDisponiveis != null)
         {
-                    foreach (var materialSelectItem in Model.MateriaisDisponiveis)
-                    {
-                                @:materiaisDisponiveisParaJs_Encomenda.push({ value: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(materialSelectItem.Value ?? ""))", text: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(materialSelectItem.Text ?? "Material Inválido"))" });
-                    }
+                foreach (var item in Model.MateriaisDisponiveis)
+                {
+                        <text>
+                        optionsHtml += '<option value="@Html.Raw(item.Value)">@Html.Raw(item.Text)</option>';
+                        </text>
+                }
         }
+
         document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('itens-container').addEventListener('change', function(e) {
+                if (e.target && e.target.classList.contains('toggle-material-checkbox')) {
+                    const container = e.target.closest('.material-selection-group');
+                    const dropdown = container.querySelector('.material-dropdown');
+                    const input = container.querySelector('.material-input');
+
+                    if (e.target.checked) {
+                        dropdown.style.display = 'none';
+                        dropdown.disabled = true;
+
+                        input.style.display = 'block';
+                        input.disabled = false;
+                        input.focus();
+                    } else {
+                        dropdown.style.display = 'block';
+                        dropdown.disabled = false;
+
+                        input.style.display = 'none';
+                        input.disabled = true;
+                        input.value = '';
+                    }
+                }
+            });
+
             var btnAdicionar = document.getElementById('btnAdicionarItem');
             if (btnAdicionar) {
                 btnAdicionar.addEventListener('click', function () {
                     const container = document.getElementById('itens-container');
-                    let optionsHtml = '<option value="">-- Selecione o Material --</option>';
-                    materiaisDisponiveisParaJs_Encomenda.forEach(function(material) {
-                        optionsHtml += `<option value="${material.value}">${material.text}</option>`;
-                    });
                     const newItemHtml = `
                         <div class="item-requisicao">
                             <div class="row">
-                                <div class="col-md-7 form-group">
-                                    <label for="ItensRequisicao_${itemIndexEncomenda}__NomeMaterialOuId" class="form-label">Material</label>
-                                    <select name="ItensRequisicao[${itemIndexEncomenda}].NomeMaterialOuId" id="ItensRequisicao_${itemIndexEncomenda}__NomeMaterialOuId" class="form-select">${optionsHtml}</select>
+                                <div class="col-md-7 form-group material-selection-group">
+                                    <label class="form-label">Material</label>
+
+                                    <select name="ItensRequisicao[${itemIndexEncomenda}].NomeMaterialOuId" class="form-select material-dropdown">
+                                        ${optionsHtml}
+                                    </select>
+
+                                    <input type="text" name="ItensRequisicao[${itemIndexEncomenda}].NomeMaterialOuId" class="form-control material-input" placeholder="Digite o nome do material..." style="display:none;" disabled />
+
+                                    <div class="toggle-material-wrapper">
+                                        <input type="checkbox" class="toggle-material-checkbox" id="toggle_${itemIndexEncomenda}">
+                                        <label for="toggle_${itemIndexEncomenda}" style="cursor:pointer;">Outro / Não listado</label>
+                                    </div>
+
                                     <span class="text-danger field-validation-valid" data-valmsg-for="ItensRequisicao[${itemIndexEncomenda}].NomeMaterialOuId" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="col-md-3 form-group">
-                                    <label for="ItensRequisicao_${itemIndexEncomenda}__Quantidade" class="form-label">Quantidade</label>
-                                    <input type="number" min="1" value="1" name="ItensRequisicao[${itemIndexEncomenda}].Quantidade" id="ItensRequisicao_${itemIndexEncomenda}__Quantidade" class="form-control" />
-                                    <span class="text-danger field-validation-valid" data-valmsg-for="ItensRequisicao[${itemIndexEncomenda}].Quantidade" data-valmsg-replace="true"></span>
+                                    <label class="form-label">Quantidade</label>
+                                    <input type="number" min="1" value="1" name="ItensRequisicao[${itemIndexEncomenda}].Quantidade" class="form-control" />
                                 </div>
                                 <div class="col-md-2 d-flex align-items-end form-group">
                                     <button type="button" class="remove-item-btn" onclick="removerItemRequisicaoEncomenda(this)">Remover</button>
                                 </div>
                             </div>
                         </div>`;
+
                     container.insertAdjacentHTML('beforeend', newItemHtml);
+
                     const form = container.closest('form');
-                    if (form && typeof window.jQuery !== 'undefined' && typeof window.jQuery.validator !== 'undefined' && typeof window.jQuery.validator.unobtrusive !== 'undefined') {
-                        window.jQuery(form).removeData("validator").removeData("unobtrusiveValidation");
-                        window.jQuery.validator.unobtrusive.parse(form);
+                    if (form && window.jQuery) {
+                        $(form).removeData("validator").removeData("unobtrusiveValidation");
+                        $.validator.unobtrusive.parse(form);
                     }
                     itemIndexEncomenda++;
                 });
             }
         });
+
         function removerItemRequisicaoEncomenda(button) {
             const itemRequisicaoDiv = button.closest('.item-requisicao');
             const container = document.getElementById('itens-container');

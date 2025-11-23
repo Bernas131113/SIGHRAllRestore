@@ -106,6 +106,7 @@ builder.Services.AddAntiforgery(options => { options.HeaderName = "RequestVerifi
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHostedService<RenovacaoFeriasService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
