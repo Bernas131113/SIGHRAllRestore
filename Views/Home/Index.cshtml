@@ -6,123 +6,283 @@
     <title>Bem-vindo ao SIGHR</title>
     <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
     <style>
-        /* Estilos inline para garantir a formatação específica desta página */
-        #registo-ponto-area {
+        /* --- RESET & BASE --- */
+        :root {
+            --primary-blue: #007bff;
+            --primary-green: #28a745;
+            --dark-text: #2d3748;
+            --light-text: #718096;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* --- LAYOUT PRINCIPAL --- */
+        .welcome-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
             text-align: center;
-            margin-left: auto;
-            margin-right: auto;
-            margin-bottom: 15px;
         }
 
-            #registo-ponto-area .btn {
-                margin-top: 10px;
-                margin-bottom: 10px;
+        .logo-hero {
+            max-width: 220px;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .hero-title {
+            font-size: 1.8rem;
+            color: var(--dark-text);
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .hero-subtitle {
+            color: var(--light-text);
+            font-size: 1rem;
+            margin-bottom: 40px;
+        }
+
+        /* --- CARTÕES DE LOGIN (AGORA COM CSS GRID) --- */
+        .login-cards-wrapper {
+            display: grid;
+            /* Isto força 2 colunas de tamanho igual */
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 800px; /* Largura máxima do conjunto */
+            margin: 0 auto 60px auto; /* Centrar na página */
+        }
+
+        /* Em telemóveis, passa para 1 coluna */
+        @@media (max-width: 768px) {
+            .login-cards-wrapper
+
+        {
+            grid-template-columns: 1fr;
+        }
+
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%; /* Ocupa a célula da grelha toda */
+            height: 100%; /* Garante que ambos têm a mesma altura */
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            /* Garante que o box-sizing não estraga o layout */
+            box-sizing: border-box;
+        }
+
+            .login-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             }
 
-        .update-notes-card {
-            background-color: #f8f9fa;
-            border: 1px solid #e9e9e9;
-            border-left: 5px solid #007bff; /* Barra azul de destaque */
+        /* Estilos Específicos Admin */
+        .card-admin:hover {
+            border-color: var(--primary-green);
+        }
+
+        .card-admin .icon-bg {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--primary-green);
+        }
+
+        /* Estilos Específicos Colaborador */
+        .card-collab:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .card-collab .icon-bg {
+            background-color: rgba(0, 123, 255, 0.1);
+            color: var(--primary-blue);
+        }
+
+        .icon-bg {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+            font-size: 2.5rem;
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--dark-text);
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: var(--light-text);
+            margin-bottom: 20px;
+            flex-grow: 1; /* Empurra o botão para o fundo */
+        }
+
+        .btn-fake {
+            display: block;
+            width: 100%;
+            padding: 12px;
             border-radius: 8px;
-            padding: 25px;
-            margin-bottom: 2rem;
-            max-width: 800px; /* Limita a largura para leitura fácil */
-            margin-left: auto;
-            margin-right: auto;
+            font-weight: 600;
+            text-align: center;
+            margin-top: auto;
         }
 
-            .update-notes-card h4 {
-                font-size: 1.3rem;
-                color: #333;
-                margin-top: 0;
-                margin-bottom: 20px;
-                padding-bottom: 10px;
-                border-bottom: 1px solid #ddd;
+        .btn-admin {
+            background-color: var(--primary-green);
+            color: white;
+        }
+
+        .btn-collab {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+
+        /* --- SEÇÃO DE ATUALIZAÇÕES --- */
+        .updates-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            text-align: left;
+            max-width: 800px; /* Alinhado com a largura dos cartões */
+            margin: 0 auto;
+            border-top: 4px solid #6c757d;
+        }
+
+        .updates-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+            .updates-header h4 {
+                margin: 0;
+                font-size: 1.2rem;
+                color: var(--dark-text);
             }
 
-            .update-notes-card p {
-                margin-bottom: 5px;
-                color: #495057;
-            }
+        .updates-date {
+            font-size: 0.85rem;
+            color: #999;
+            font-weight: 600;
+        }
 
-            .update-notes-card .version-info {
-                font-weight: bold;
-                margin-bottom: 10px;
-                margin-top: 15px;
-                color: #212529;
-                text-transform: uppercase;
-                font-size: 0.85rem;
-                letter-spacing: 0.5px;
-            }
+        .version-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            margin-top: 15px;
+        }
 
-            .update-notes-card ul {
-                list-style: none;
-                padding-left: 0;
-            }
+        .badge-new {
+            background-color: #e6f7ff;
+            color: #007bff;
+        }
 
-            .update-notes-card li {
+        .badge-fix {
+            background-color: #fff7e6;
+            color: #fa8c16;
+        }
+
+        .updates-list {
+            list-style: none;
+            padding: 0;
+        }
+
+            .updates-list li {
                 margin-bottom: 8px;
-                padding-left: 25px;
+                padding-left: 20px;
                 position: relative;
+                color: #4a5568;
+                font-size: 0.95rem;
             }
 
-        /* Ícones para as listas */
-        .feature::before {
-            content: '✨';
-            position: absolute;
-            left: 0;
-        }
-
-        .fix::before {
-            content: '🛠️';
-            position: absolute;
-            left: 0;
-        }
-
-        .new::before {
-            content: '🚀';
-            position: absolute;
-            left: 0;
-        }
-
+                .updates-list li::before {
+                    content: '•';
+                    position: absolute;
+                    left: 0;
+                    color: #cbd5e0;
+                    font-weight: bold;
+                }
     </style>
 </head>
 <body>
-    <div class="content-wrapper">
-        <div class="logo-container">
-            <a asp-controller="Home" asp-action="Index">
-                <img src="~/images/AllRestore-Logotipo-T180px.png" alt="Logótipo SIGHR" class="logo">
+
+    <div class="welcome-container">
+        <img src="~/images/AllRestore-Logotipo-T180px.png" alt="Logótipo SIGHR" class="logo-hero">
+        <h1 class="hero-title">Bem-vindo ao SIGHR</h1>
+        <p class="hero-subtitle">Sistema Integrado de Gestão de Recursos Humanos</p>
+
+        <div class="login-cards-wrapper">
+
+            <a href="~/Identity/Account/AdminLogin" class="login-card card-admin">
+                <div class="icon-bg">
+                    🛡️
+                </div>
+                <h3 class="card-title">Administrador</h3>
+                <p class="card-desc">Acesso à gestão global, relatórios, encomendas e configurações do sistema.</p>
+                <div class="btn-fake btn-admin">Entrar</div>
             </a>
+
+            <a href="~/Identity/Account/CollaboratorPinLogin" class="login-card card-collab">
+                <div class="icon-bg">
+                    👷
+                </div>
+                <h3 class="card-title">Colaborador</h3>
+                <p class="card-desc">Registo de ponto, marcação de férias, encomendas de material e feedback.</p>
+                <div class="btn-fake btn-collab">Entrar</div>
+            </a>
+
         </div>
 
-        <div id="registo-ponto-area">
-            <h1>Bem-vindo ao SIGHR</h1>
-            <p>Selecione o seu perfil para continuar:</p>
+        <div class="updates-section">
+            <div class="updates-header">
+                <h4>Notas de Atualização</h4>
+                <span class="updates-date">v2.0 • 23 NOV 2025</span>
+            </div>
 
-            <a href="~/Identity/Account/AdminLogin" class="btn btn-green">Administrador</a>
-            <a href="~/Identity/Account/CollaboratorPinLogin" class="btn btn-blue">Colaborador</a>
+            <span class="version-badge badge-new">Novidades</span>
+            <ul class="updates-list">
+                <li><strong>Área de Feedback:</strong> Reporte erros ou envie sugestões diretamente na plataforma.</li>
+                <li><strong>Encomendas Flexíveis:</strong> Opção para inserir materiais não listados ("Outro") manualmente.</li>
+                <li><strong>Notificações Email:</strong> Alertas automáticos enviados para a administração ao criar encomendas.</li>
+                <li><strong>Férias 2.0:</strong> Novo calendário visual, validação de conflitos e gestão inteligente de saldos.</li>
+                          </ul>
+
+            <span class="version-badge badge-fix">Correções & Melhorias</span>
+            <ul class="updates-list">
+                <li>Otimização drástica do login facial (mais rápido e leve).</li>
+                <li>Resolução de erros de ligação ao servidor ("Erro 500").</li>
+                <li>Correção de bugs de fuso horário nos filtros de data.</li>
+            </ul>
         </div>
     </div>
 
-    <div class="update-notes-card">
-        <h4>Notas de Atualização</h4>
-        <p style="font-size: 0.9rem; color: #666;">Última atualização: 23 de Novembro, 2025</p>
-
-        <p class="version-info">Novas Funcionalidades</p>
-        <ul>
-            <li class="new"><strong>Área de Feedback:</strong> Agora pode reportar erros ou enviar sugestões diretamente na plataforma.</li>
-            <li class="feature"><strong>Encomendas:</strong> Adicionada opção para inserir manualmente materiais não listados ("Outro").</li>
-            <li class="feature"><strong>Notificações:</strong> Emails automáticos enviados para a administração ao criar encomendas.</li>
-            <li class="feature"><strong>Férias:</strong> Novo calendário visual e melhor gestão de conflitos de datas.</li>
-            
-        </ul>
-
-        <p class="version-info">Melhorias Técnicas e Correções</p>
-        <ul>
-            <li class="fix">Resolvidos erros de ligação ao servidor (fim dos erros "500" no arranque).</li>
-            <li class="fix">Otimização do reconhecimento facial (mais rápido e leve).</li>
-            <li class="fix">Correção no cálculo de saldo de dias de férias.</li>
-        </ul>
-    </div>
 </body>
 </html>
