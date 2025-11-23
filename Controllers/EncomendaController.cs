@@ -189,7 +189,7 @@ namespace SIGHR.Controllers
                             // 1. Cria a lista de destinatários
                             var recipientList = new List<string>
                             {
-                                "ialves@allrestore.pt",
+                                 "ialves@allrestore.pt",
                                 "bbexiga@allrestore.pt",
                                 "spequeno@allrestore.pt",
                                 "pleitao@allrestore.pt"

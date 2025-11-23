@@ -8,15 +8,13 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using System.Security.Claims;
 
 namespace SIGHR.Controllers.Api
 {
-    // O Request Model continua a usar string para as datas, o que é a abordagem correta.
-    public class MarcarFeriasRequest
-    {
-        public string Start { get; set; } = string.Empty;
-        public string End { get; set; } = string.Empty;
-    }
+    public class MarcarFeriasRequest { public string Start { get; set; } = string.Empty; public string End { get; set; } = string.Empty; }
+    public class ApagarFeriasRequest { public long Id { get; set; } }
 
     [Route("api/ferias")]
     [ApiController]
@@ -34,89 +32,96 @@ namespace SIGHR.Controllers.Api
             _logger = logger;
         }
 
+        // 1. OBTER EVENTOS (A LÓGICA SIMPLES QUE FUNCIONAVA)
         [HttpGet("eventos")]
         public async Task<IActionResult> GetEventos(DateTime start, DateTime end)
         {
             try
             {
-                var eventos = await _context.Ferias
+                if (start.Kind == DateTimeKind.Unspecified) start = DateTime.SpecifyKind(start, DateTimeKind.Utc);
+                if (end.Kind == DateTimeKind.Unspecified) end = DateTime.SpecifyKind(end, DateTimeKind.Utc);
+
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                var feriasList = await _context.Ferias
                     .Where(f => f.DataInicio < end && f.DataFim >= start)
                     .Include(f => f.User)
-                    .Select(f => new {
-                        title = f.User != null ? f.User.NomeCompleto ?? f.User.UserName : "Desconhecido",
-                        start = f.DataInicio.ToString("yyyy-MM-dd"),
-                        end = f.DataFim.AddDays(1).ToString("yyyy-MM-dd"),
-                        color = f.Tipo == "Empresa" ? "#dc3545" : "#0d6efd"
-                    })
                     .ToListAsync();
+
+                var eventos = feriasList.Select(f => new {
+                    id = f.Id,
+                    title = f.User != null ? f.User.NomeCompleto ?? f.User.UserName : "Desconhecido",
+                    start = f.DataInicio.ToString("yyyy-MM-dd"),
+                    end = f.DataFim.AddDays(1).ToString("yyyy-MM-dd"),
+                    color = (f.Tipo == "Empresa") ? "#dc3545" : "#0d6efd",
+
+                    // A LÓGICA ORIGINAL: É meu e não é empresa? Então é editável.
+                    editable = (f.UtilizadorId == userId && f.Tipo != "Empresa")
+                });
 
                 return Ok(eventos);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Ocorreu um erro ao carregar os eventos do calendário de férias.");
-                return StatusCode(500, new { message = "Ocorreu um erro interno no servidor ao carregar os eventos." });
-            }
+            catch { return StatusCode(500, new { message = "Erro ao carregar eventos." }); }
         }
 
-        [HttpGet("diasrestantes")]
-        public async Task<IActionResult> GetDiasRestantes()
+        // 2. APAGAR FÉRIAS (A LÓGICA SIMPLES QUE FUNCIONAVA)
+        [HttpPost("apagar")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApagarFerias([FromBody] ApagarFeriasRequest request)
         {
-            try
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null) return Unauthorized();
-                return Ok(new { dias = user.DiasFeriasDisponiveis });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Ocorreu um erro ao obter os dias de férias restantes.");
-                return StatusCode(500, new { message = "Ocorreu um erro ao obter os dias de férias." });
-            }
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var ferias = await _context.Ferias.Include(f => f.User).FirstOrDefaultAsync(f => f.Id == request.Id);
+
+            if (ferias == null) return NotFound(new { message = "Não encontrado." });
+
+            // Validação simples
+            if (ferias.UtilizadorId != userId || ferias.Tipo == "Empresa")
+                return BadRequest(new { message = "Não tem permissão para apagar." });
+
+            if (ferias.User != null) ferias.User.DiasFeriasDisponiveis += ferias.DiasGastos;
+
+            _context.Ferias.Remove(ferias);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Apagado com sucesso.", diasRestantes = ferias.User?.DiasFeriasDisponiveis ?? 0 });
         }
 
+        // 3. MARCAR FÉRIAS
         [HttpPost("marcar")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarcarFerias([FromBody] MarcarFeriasRequest request)
         {
             try
             {
-                var user = await _userManager.GetUserAsync(User);
+                var user = await _userManager.GetUserAsync(User); // Aqui usamos UserManager para ter o objeto completo
                 if (user == null) return Unauthorized();
 
-                if (!DateTime.TryParse(request.Start, out var dataInicio) || !DateTime.TryParse(request.End, out var dataFim))
-                    return BadRequest(new { message = "Formato de data inválido." });
+                if (!DateTime.TryParse(request.Start, out var dI) || !DateTime.TryParse(request.End, out var dF)) return BadRequest(new { message = "Datas inválidas." });
 
-                dataInicio = DateTime.SpecifyKind(dataInicio, DateTimeKind.Utc);
-                dataFim = DateTime.SpecifyKind(dataFim, DateTimeKind.Utc);
+                dI = DateTime.SpecifyKind(dI, DateTimeKind.Utc).Date;
+                dF = DateTime.SpecifyKind(dF, DateTimeKind.Utc).Date;
 
-                int diasUteis = CalcularDiasUteis(dataInicio, dataFim);
-                if (diasUteis <= 0) return BadRequest(new { message = "Selecione pelo menos um dia útil." });
+                if (await _context.Ferias.AnyAsync(f => f.UtilizadorId == user.Id && f.DataInicio <= dF && f.DataFim >= dI))
+                    return BadRequest(new { message = "Já existem férias neste período." });
 
-                if (user.DiasFeriasDisponiveis < diasUteis)
-                    return BadRequest(new { message = $"Não tem dias de férias suficientes. Precisa de {diasUteis}, mas só tem {user.DiasFeriasDisponiveis}." });
+                int dias = CalcularDiasUteis(dI, dF);
+                if (dias <= 0) return BadRequest(new { message = "Selecione dias úteis." });
+                if (user.DiasFeriasDisponiveis < dias) return BadRequest(new { message = "Saldo insuficiente." });
 
-                user.DiasFeriasDisponiveis -= diasUteis;
-
-                var novaFerias = new Ferias
-                {
-                    UtilizadorId = user.Id,
-                    DataInicio = dataInicio.Date,
-                    DataFim = dataFim.Date,
-                    DiasGastos = diasUteis,
-                    Tipo = "Individual"
-                };
-
-                _context.Ferias.Add(novaFerias);
+                user.DiasFeriasDisponiveis -= dias;
+                _context.Ferias.Add(new Ferias { UtilizadorId = user.Id, DataInicio = dI, DataFim = dF, DiasGastos = dias, Tipo = "Individual" });
                 await _context.SaveChangesAsync();
+                return Ok(new { message = "Marcado com sucesso!", diasRestantes = user.DiasFeriasDisponiveis });
+            }
+            catch { return StatusCode(500, new { message = "Erro interno." }); }
+        }
 
-                return Ok(new { message = $"Férias marcadas com sucesso! Foram descontados {diasUteis} dias.", diasRestantes = user.DiasFeriasDisponiveis });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "ERRO CRÍTICO INESPERADO no método MarcarFerias.");
-                return StatusCode(500, new { message = "Ocorreu um erro inesperado no servidor. Consulte os logs." });
-            }
+        // 4. SALDO E ADMIN (SEM ALTERAÇÕES)
+        [HttpGet("diasrestantes")]
+        public async Task<IActionResult> GetDiasRestantes()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+            return Ok(new { dias = user.DiasFeriasDisponiveis });
         }
 
         [HttpPost("admin/marcarempresa")]
@@ -124,58 +129,40 @@ namespace SIGHR.Controllers.Api
         [Authorize(Policy = "AdminAccessUI")]
         public async Task<IActionResult> MarcarFeriasEmpresa([FromBody] MarcarFeriasRequest request)
         {
-            if (!DateTime.TryParse(request.Start, out var dataInicio) || !DateTime.TryParse(request.End, out var dataFim))
-                return BadRequest(new { message = "Formato de data inválido." });
+            if (!DateTime.TryParse(request.Start, out var dI) || !DateTime.TryParse(request.End, out var dF)) return BadRequest(new { message = "Datas inválidas." });
+            dI = DateTime.SpecifyKind(dI, DateTimeKind.Utc).Date; dF = DateTime.SpecifyKind(dF, DateTimeKind.Utc).Date;
+            int dias = CalcularDiasUteis(dI, dF);
+            if (dias <= 0) return BadRequest(new { message = "Zero dias." });
 
-            dataInicio = DateTime.SpecifyKind(dataInicio, DateTimeKind.Utc);
-            dataFim = DateTime.SpecifyKind(dataFim, DateTimeKind.Utc);
-
-            int diasUteis = CalcularDiasUteis(dataInicio, dataFim);
-            if (diasUteis <= 0) return BadRequest(new { message = "Selecione pelo menos um dia útil." });
-
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var tr = await _context.Database.BeginTransactionAsync();
             try
             {
-                // ALTERAÇÃO: A consulta agora filtra apenas por funcionários ativos.
-                var funcionariosAtivos = await _userManager.Users
-                    .Where(u => u.IsActiveEmployee)
-                    .ToListAsync();
-
-                foreach (var user in funcionariosAtivos)
+                var users = await _userManager.Users.Where(u => u.IsActiveEmployee).Include(u => u.Ferias).ToListAsync();
+                foreach (var u in users)
                 {
-                    user.DiasFeriasDisponiveis -= diasUteis;
-                    _context.Ferias.Add(new Ferias
+                    var ovs = u.Ferias.Where(f => f.DataInicio <= dF && f.DataFim >= dI && f.Tipo != "Empresa").ToList();
+                    int r = 0;
+                    if (ovs.Any())
                     {
-                        UtilizadorId = user.Id,
-                        DataInicio = dataInicio.Date,
-                        DataFim = dataFim.Date,
-                        DiasGastos = diasUteis,
-                        Tipo = "Empresa"
-                    });
+                        for (DateTime d = dI; d <= dF; d = d.AddDays(1)) if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday && ovs.Any(f => d >= f.DataInicio && d <= f.DataFim)) r++;
+                        var rem = ovs.Where(f => f.DataInicio >= dI && f.DataFim <= dF).ToList();
+                        if (rem.Any()) _context.Ferias.RemoveRange(rem);
+                    }
+                    u.DiasFeriasDisponiveis = u.DiasFeriasDisponiveis + r - dias;
+                    _context.Ferias.Add(new Ferias { UtilizadorId = u.Id, DataInicio = dI, DataFim = dF, DiasGastos = dias, Tipo = "Empresa" });
                 }
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return Ok(new { message = $"Férias de empresa marcadas com sucesso para {funcionariosAtivos.Count} funcionários." });
+                await _context.SaveChangesAsync(); await tr.CommitAsync();
+                return Ok(new { message = "Marcado para empresa." });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Falha na transação ao marcar férias de empresa.");
-                await transaction.RollbackAsync();
-                return StatusCode(500, new { message = "Ocorreu um erro. Nenhuma férias foi marcada." });
-            }
+            catch { await tr.RollbackAsync(); return StatusCode(500, new { message = "Erro." }); }
         }
 
-        private int CalcularDiasUteis(DateTime start, DateTime end)
+        private int CalcularDiasUteis(DateTime s, DateTime e)
         {
-            int dias = 0;
-            for (DateTime date = start; date <= end; date = date.AddDays(1))
-            {
-                if (date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
-                    dias++;
-            }
-            return dias;
+            int d = 0;
+            for (DateTime dt = s; dt <= e; dt = dt.AddDays(1))
+                if (dt.DayOfWeek != DayOfWeek.Saturday && dt.DayOfWeek != DayOfWeek.Sunday) d++;
+            return d;
         }
     }
 }

@@ -22,6 +22,8 @@ namespace SIGHR.Areas.Identity.Data
 
         public int DiasFeriasDisponiveis { get; set; } = 24;
 
+        public int AnoUltimoCreditoFerias { get; set; } = DateTime.UtcNow.Year;
+
         // Propriedades de Navegação
         public virtual ICollection<Horario> Horarios { get; set; } = new List<Horario>();
         public virtual ICollection<Falta> Faltas { get; set; } = new List<Falta>();
