@@ -63,7 +63,7 @@ namespace SIGHR.Services
                     foreach (var user in utilizadoresParaAtualizar)
                     {
                         // Adiciona os 24 dias
-                        user.DiasFeriasDisponiveis += 24;
+                        user.DiasFeriasDisponiveis += 22;
 
                         // Marca que este utilizador já recebeu as férias de 'anoAtual'
                         user.AnoUltimoCreditoFerias = anoAtual;
