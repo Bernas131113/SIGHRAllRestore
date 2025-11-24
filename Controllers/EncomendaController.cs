@@ -93,7 +93,11 @@ namespace SIGHR.Controllers
                             .Select(r => r.Material!.Descricao ?? "Item")
                             .Take(2)) + (e.Requisicoes.Count > 2 ? "..." : "") :
                         "Nenhum material",
-                    QuantidadeTotalItens = (e.Requisicoes != null) ? e.Requisicoes.Sum(r => (int)r.Quantidade) : 0,
+
+                    // === ISTO É O IMPORTANTE: Sum(r => r.Quantidade) sem o (int) ===
+                    QuantidadeTotalItens = (e.Requisicoes != null) ? e.Requisicoes.Sum(r => r.Quantidade) : 0,
+                    // ================================================================
+
                     Estado = e.Estado ?? "Indefinido"
                 })
                 .ToListAsync();
@@ -189,10 +193,12 @@ namespace SIGHR.Controllers
                             // 1. Cria a lista de destinatários
                             var recipientList = new List<string>
                             {
-                                 "ialves@allrestore.pt",
-                                "bbexiga@allrestore.pt",
-                                "spequeno@allrestore.pt",
-                                "pleitao@allrestore.pt"
+                                  "ialves@allrestore.pt",
+                                  "bbexiga@allrestore.pt",
+                                   "spequeno@allrestore.pt",
+                                    "pleitao@allrestore.pt",
+                                    "bernardomiguelalves34@gmail.com"
+
                             };
 
                             // 2. Envia a notificação para a lista

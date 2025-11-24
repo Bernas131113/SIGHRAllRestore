@@ -6,25 +6,18 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace SIGHR.Models.ViewModels
 {
-    /// <summary>
-    /// ViewModel para representar uma única linha de item no formulário de registo de encomenda.
-    /// </summary>
     public class ItemRequisicaoViewModel
     {
-        /// <summary>
-        /// O nome do material selecionado no dropdown.
-        /// </summary>
         [Required(ErrorMessage = "Selecione um material.")]
         [Display(Name = "Material")]
         public string? NomeMaterialOuId { get; set; }
 
-        /// <summary>
-        /// A quantidade desejada para o material selecionado.
-        /// </summary>
+        // ================== ALTERAÇÃO: de 'int' para 'double' ==================
         [Required(ErrorMessage = "A quantidade é obrigatória.")]
-        [Range(1, int.MaxValue, ErrorMessage = "A quantidade deve ser, no mínimo, 1.")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "A quantidade deve ser maior que zero.")]
         [Display(Name = "Quantidade")]
-        public int Quantidade { get; set; } = 1; // Valor padrão inicial.
+        public double Quantidade { get; set; } = 1;
+        // ========================================================================
     }
 
     /// <summary>

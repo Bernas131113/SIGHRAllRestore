@@ -30,39 +30,48 @@ namespace SIGHR.Services
 
             try
             {
-                // Configuração do Servidor do Gmail
                 using (var client = new SmtpClient("smtp.gmail.com", 587))
                 {
                     client.EnableSsl = true;
                     client.UseDefaultCredentials = false;
                     client.Credentials = new NetworkCredential(_senderAddress, _appPassword);
 
-                    // Criar a mensagem
                     var mailMessage = new MailMessage();
                     mailMessage.From = new MailAddress(_senderAddress, "SIGHR Notificações");
+
+                    // 1. O destinatário "To" é o próprio sistema (para não expor ninguém)
+                    // Ou podes usar o primeiro da lista, mas BCC é melhor.
+                    mailMessage.To.Add(_senderAddress);
+
+                    // 2. Adicionar todos os destinatários como BCC (Cópia Oculta)
+                    foreach (var email in recipientEmails)
+                    {
+                        // Validação simples para não crashar com emails vazios
+                        if (!string.IsNullOrWhiteSpace(email))
+                        {
+                            mailMessage.Bcc.Add(email.Trim());
+                        }
+                    }
+
                     mailMessage.Subject = $"Nova Encomenda: {encomenda.DescricaoObra ?? "Sem Obra"}";
                     mailMessage.Body = BuildEmailBody(encomenda);
                     mailMessage.IsBodyHtml = true;
 
-                    // Adicionar destinatários
-                    foreach (var email in recipientEmails)
-                    {
-                        mailMessage.To.Add(email);
-                    }
-
-                    // Enviar
                     await client.SendMailAsync(mailMessage);
-                    _logger.LogInformation($"E-mail enviado via Gmail SMTP para {recipientEmails.Count} destinatários.");
+                    _logger.LogInformation($"E-mail enviado via Gmail SMTP para {recipientEmails.Count} destinatários (BCC).");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao enviar e-mail via Gmail SMTP. Verifica a App Password.");
+                _logger.LogError(ex, "Erro ao enviar e-mail via Gmail SMTP.");
+                // Podes adicionar um 'throw' aqui se quiseres saber o erro exato durante o debug
+                // throw; 
             }
         }
 
         private string BuildEmailBody(Encomenda encomenda)
         {
+            // (O teu método BuildEmailBody mantém-se igual ao que já tens)
             var sb = new StringBuilder();
             sb.Append("<div style='font-family: Arial, sans-serif; color: #333;'>");
             sb.Append($"<h2>Nova Encomenda de {encomenda.User?.NomeCompleto ?? "Colaborador"}</h2>");
