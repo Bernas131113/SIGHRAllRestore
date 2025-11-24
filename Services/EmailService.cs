@@ -20,9 +20,9 @@ namespace SIGHR.Services
 
         public EmailService(IConfiguration config, ILogger<EmailService> logger)
         {
-            // Lê a chave SG....
-            _apiKey = config["EmailSender:ApiKey"] ?? throw new InvalidOperationException("EmailSender:ApiKey não está configurada.");
-            _senderAddress = config["EmailSender:Address"] ?? throw new InvalidOperationException("EmailSender:Address não está configurada.");
+            // Lê a chave do SendGrid
+            _apiKey = config["EmailSender:ApiKey"] ?? throw new InvalidOperationException("EmailSender:ApiKey não configurada.");
+            _senderAddress = config["EmailSender:Address"] ?? throw new InvalidOperationException("EmailSender:Address não configurada.");
             _senderName = "SIGHR Notificações";
             _logger = logger;
         }
@@ -33,17 +33,14 @@ namespace SIGHR.Services
 
             var client = new SendGridClient(_apiKey);
             var from = new EmailAddress(_senderAddress, _senderName);
-
             var subject = $"Nova Encomenda: {encomenda.DescricaoObra ?? "Sem Obra"}";
             var htmlContent = BuildEmailBody(encomenda);
             var plainTextContent = "Uma nova encomenda foi registada.";
 
-            // Converter lista de strings para lista de EmailAddress
+            // Converte as strings para objetos EmailAddress
             var tos = recipientEmails.Select(e => new EmailAddress(e)).ToList();
 
-            // ESTE MÉTODO É O SEGREDO:
-            // Envia um e-mail individual para cada pessoa da lista.
-            // Ninguém vê o e-mail dos outros.
+            // Envia para todos de uma vez (individualmente)
             var msg = MailHelper.CreateSingleEmailToMultipleRecipients(from, tos, subject, plainTextContent, htmlContent);
 
             try
@@ -52,18 +49,17 @@ namespace SIGHR.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("E-mail enviado via SendGrid com sucesso.");
+                    _logger.LogInformation("SendGrid: E-mail enviado com sucesso.");
                 }
                 else
                 {
-                    // Isto vai aparecer nos logs do Render se falhar
                     var body = await response.Body.ReadAsStringAsync();
-                    _logger.LogError($"SendGrid falhou. Status: {response.StatusCode}, Erro: {body}");
+                    _logger.LogError($"SendGrid Falhou: {response.StatusCode} - {body}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Exceção crítica no SendGrid.");
+                _logger.LogError(ex, "Erro crítico no envio SendGrid.");
             }
         }
 

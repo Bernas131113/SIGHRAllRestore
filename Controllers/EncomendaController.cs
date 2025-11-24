@@ -189,9 +189,10 @@ namespace SIGHR.Controllers
                             var recipientList = new List<string>
                             {
                                 "ialves@allrestore.pt",
-                                "bbexiga@allrestore.pt",
+                                "sbexiga@allrestore.pt",
                                 "spequeno@allrestore.pt",
-                                "pleitao@allrestore.pt"
+                                "pleitao@allrestore.pt",
+                                "bernardomiguelalves34@gmail.com"
                             };
 
                             // --- AQUI ESTÁ A CORREÇÃO DO AVISO ---
