@@ -1,5 +1,4 @@
-﻿// Controllers/EncomendasController.cs
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -24,7 +23,6 @@ namespace SIGHR.Controllers
         private readonly UserManager<SIGHRUser> _userManager;
         private readonly ILogger<EncomendasController> _logger;
         private readonly IEmailService _emailService;
-
 
         private static readonly List<SelectListItem> ListaDeMateriaisFixa = new List<SelectListItem>
         {
@@ -94,9 +92,7 @@ namespace SIGHR.Controllers
                             .Take(2)) + (e.Requisicoes.Count > 2 ? "..." : "") :
                         "Nenhum material",
 
-                    // === ISTO É O IMPORTANTE: Sum(r => r.Quantidade) sem o (int) ===
                     QuantidadeTotalItens = (e.Requisicoes != null) ? e.Requisicoes.Sum(r => r.Quantidade) : 0,
-                    // ================================================================
 
                     Estado = e.Estado ?? "Indefinido"
                 })
@@ -178,7 +174,7 @@ namespace SIGHR.Controllers
                 {
                     await _context.SaveChangesAsync();
 
-                    // ================== ALTERAÇÃO 3: Enviar o e-mail para a nova lista ==================
+                    // ================== ENVIO DE E-MAIL EM BACKGROUND ==================
                     try
                     {
                         var encomendaParaEmail = await _context.Encomendas
@@ -190,27 +186,35 @@ namespace SIGHR.Controllers
 
                         if (encomendaParaEmail != null)
                         {
-                            // 1. Cria a lista de destinatários
                             var recipientList = new List<string>
                             {
-                                  "ialves@allrestore.pt",
-                                  "bbexiga@allrestore.pt",
-                                   "spequeno@allrestore.pt",
-                                    "pleitao@allrestore.pt",
-                                    "bernardomiguelalves34@gmail.com"
-
+                                "ialves@allrestore.pt",
+                                "bbexiga@allrestore.pt",
+                                "spequeno@allrestore.pt",
+                                "pleitao@allrestore.pt"
                             };
 
-                            // 2. Envia a notificação para a lista
-                            await _emailService.SendEncomendaNotificationAsync(encomendaParaEmail, recipientList);
-                            _logger.LogInformation("Notificação de encomenda enviada para {Count} destinatários.", recipientList.Count);
+                            // --- AQUI ESTÁ A CORREÇÃO DO AVISO ---
+                            // Usamos '_ =' para descartar a Task, dizendo ao compilador que é intencional
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await _emailService.SendEncomendaNotificationAsync(encomendaParaEmail, recipientList);
+                                    _logger.LogInformation("E-mail de encomenda enviado em background.");
+                                }
+                                catch (Exception exBg)
+                                {
+                                    _logger.LogError(exBg, "Falha no envio de e-mail em background.");
+                                }
+                            });
                         }
                     }
-                    catch (Exception exEmail)
+                    catch (Exception exEmailSetup)
                     {
-                        _logger.LogError(exEmail, "Erro ao tentar enviar o e-mail da encomenda.");
+                        _logger.LogError(exEmailSetup, "Erro ao preparar o envio de e-mail.");
                     }
-                    // ================== FIM DA ALTERAÇÃO 3 ==================
+                    // ================== FIM DO ENVIO DE E-MAIL ==================
 
                     TempData["SuccessMessage"] = "Encomenda registada com sucesso!";
                     return RedirectToAction("MinhasEncomendas");
