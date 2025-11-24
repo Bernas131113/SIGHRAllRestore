@@ -1,26 +1,29 @@
 ﻿using SIGHR.Models;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+using SendGrid;
+using SendGrid.Helpers.Mail;
 using System;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace SIGHR.Services
 {
     public class EmailService : IEmailService
     {
+        private readonly string _apiKey;
         private readonly string _senderAddress;
-        private readonly string _appPassword;
+        private readonly string _senderName;
         private readonly ILogger<EmailService> _logger;
 
         public EmailService(IConfiguration config, ILogger<EmailService> logger)
         {
-            _senderAddress = config["EmailSender:Address"] ?? throw new InvalidOperationException("EmailSender:Address não configurado.");
-            _appPassword = config["EmailSender:AppPassword"] ?? throw new InvalidOperationException("EmailSender:AppPassword não configurado.");
+            // Lê a chave SG....
+            _apiKey = config["EmailSender:ApiKey"] ?? throw new InvalidOperationException("EmailSender:ApiKey não está configurada.");
+            _senderAddress = config["EmailSender:Address"] ?? throw new InvalidOperationException("EmailSender:Address não está configurada.");
+            _senderName = "SIGHR Notificações";
             _logger = logger;
         }
 
@@ -28,50 +31,44 @@ namespace SIGHR.Services
         {
             if (recipientEmails == null || !recipientEmails.Any()) return;
 
+            var client = new SendGridClient(_apiKey);
+            var from = new EmailAddress(_senderAddress, _senderName);
+
+            var subject = $"Nova Encomenda: {encomenda.DescricaoObra ?? "Sem Obra"}";
+            var htmlContent = BuildEmailBody(encomenda);
+            var plainTextContent = "Uma nova encomenda foi registada.";
+
+            // Converter lista de strings para lista de EmailAddress
+            var tos = recipientEmails.Select(e => new EmailAddress(e)).ToList();
+
+            // ESTE MÉTODO É O SEGREDO:
+            // Envia um e-mail individual para cada pessoa da lista.
+            // Ninguém vê o e-mail dos outros.
+            var msg = MailHelper.CreateSingleEmailToMultipleRecipients(from, tos, subject, plainTextContent, htmlContent);
+
             try
             {
-                using (var client = new SmtpClient("smtp.gmail.com", 587))
+                var response = await client.SendEmailAsync(msg);
+
+                if (response.IsSuccessStatusCode)
                 {
-                    client.EnableSsl = true;
-                    client.UseDefaultCredentials = false;
-                    client.Credentials = new NetworkCredential(_senderAddress, _appPassword);
-
-                    var mailMessage = new MailMessage();
-                    mailMessage.From = new MailAddress(_senderAddress, "SIGHR Notificações");
-
-                    // 1. O destinatário "To" é o próprio sistema (para não expor ninguém)
-                    // Ou podes usar o primeiro da lista, mas BCC é melhor.
-                    mailMessage.To.Add(_senderAddress);
-
-                    // 2. Adicionar todos os destinatários como BCC (Cópia Oculta)
-                    foreach (var email in recipientEmails)
-                    {
-                        // Validação simples para não crashar com emails vazios
-                        if (!string.IsNullOrWhiteSpace(email))
-                        {
-                            mailMessage.Bcc.Add(email.Trim());
-                        }
-                    }
-
-                    mailMessage.Subject = $"Nova Encomenda: {encomenda.DescricaoObra ?? "Sem Obra"}";
-                    mailMessage.Body = BuildEmailBody(encomenda);
-                    mailMessage.IsBodyHtml = true;
-
-                    await client.SendMailAsync(mailMessage);
-                    _logger.LogInformation($"E-mail enviado via Gmail SMTP para {recipientEmails.Count} destinatários (BCC).");
+                    _logger.LogInformation("E-mail enviado via SendGrid com sucesso.");
+                }
+                else
+                {
+                    // Isto vai aparecer nos logs do Render se falhar
+                    var body = await response.Body.ReadAsStringAsync();
+                    _logger.LogError($"SendGrid falhou. Status: {response.StatusCode}, Erro: {body}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao enviar e-mail via Gmail SMTP.");
-                // Podes adicionar um 'throw' aqui se quiseres saber o erro exato durante o debug
-                // throw; 
+                _logger.LogError(ex, "Exceção crítica no SendGrid.");
             }
         }
 
         private string BuildEmailBody(Encomenda encomenda)
         {
-            // (O teu método BuildEmailBody mantém-se igual ao que já tens)
             var sb = new StringBuilder();
             sb.Append("<div style='font-family: Arial, sans-serif; color: #333;'>");
             sb.Append($"<h2>Nova Encomenda de {encomenda.User?.NomeCompleto ?? "Colaborador"}</h2>");
