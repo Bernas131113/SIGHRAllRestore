@@ -191,48 +191,44 @@
         <hr />
         <h4>Itens da Encomenda</h4>
         <div id="itens-container">
-            @for (int i = 0; i < Model.ItensRequisicao.Count; i++)
+            @if (Model.MateriaisDisponiveis != null)
             {
-                <div class="item-requisicao">
-                    <div class="row">
-                        <div class="col-md-7 form-group material-selection-group">
-                            <label class="form-label">Material</label>
-
-                            <select name="ItensRequisicao[@i].NomeMaterialOuId" class="form-select material-dropdown">
-                                <option value="">-- Selecione o Material --</option>
-                                @if (Model.MateriaisDisponiveis != null)
-                                {
+                @for (int i = 0; i < Model.ItensRequisicao.Count; i++)
+                {
+                    <div class="item-requisicao">
+                        <div class="row">
+                            <div class="col-md-7 form-group material-selection-group">
+                                <label class="form-label">Material</label>
+                                <select name="ItensRequisicao[@i].NomeMaterialOuId" class="form-select material-dropdown">
+                                    <option value="">-- Selecione o Material --</option>
                                     @foreach (var opt in Model.MateriaisDisponiveis)
                                     {
                                         <option value="@opt.Value">@opt.Text</option>
                                     }
-                                }
-                            </select>
-
-                            <input type="text" name="ItensRequisicao[@i].NomeMaterialOuId" class="form-control material-input" placeholder="Digite o nome do material..." style="display:none;" disabled />
-
-                            <div class="toggle-material-wrapper">
-                                <input type="checkbox" class="toggle-material-checkbox" id="toggle_@i">
-                                <label for="toggle_@i" style="cursor:pointer;">Outro / Não listado</label>
+                                </select>
+                                <input type="text" name="ItensRequisicao[@i].NomeMaterialOuId" class="form-control material-input" placeholder="Digite o nome do material..." style="display:none;" disabled />
+                                <div class="toggle-material-wrapper">
+                                    <input type="checkbox" class="toggle-material-checkbox" id="toggle_@i">
+                                    <label for="toggle_@i" style="cursor:pointer;">Outro / Não listado</label>
+                                </div>
+                                <span asp-validation-for="ItensRequisicao[i].NomeMaterialOuId" class="text-danger"></span>
                             </div>
 
-                            <span asp-validation-for="ItensRequisicao[i].NomeMaterialOuId" class="text-danger"></span>
-                        </div>
+                            <div class="col-md-3 form-group">
+                                <label asp-for="ItensRequisicao[i].Quantidade" class="form-label"></label>
+                                <input asp-for="ItensRequisicao[i].Quantidade" type="number" step="0.01" min="0.01" class="form-control" />
+                                <span asp-validation-for="ItensRequisicao[i].Quantidade" class="text-danger"></span>
+                            </div>
 
-                        <div class="col-md-3 form-group">
-                            <label asp-for="ItensRequisicao[i].Quantidade" class="form-label"></label>
-                            <input asp-for="ItensRequisicao[i].Quantidade" type="number" min="1" value="1" class="form-control" />
-                            <span asp-validation-for="ItensRequisicao[i].Quantidade" class="text-danger"></span>
-                        </div>
-
-                        <div class="col-md-2 d-flex align-items-end form-group">
-                            @if (i > 0 || Model.ItensRequisicao.Count > 1)
-                            {
-                                <button type="button" class="remove-item-btn" onclick="removerItemRequisicaoEncomenda(this)">Remover</button>
-                            }
+                            <div class="col-md-2 d-flex align-items-end form-group">
+                                @if (i > 0 || Model.ItensRequisicao.Count > 1)
+                                {
+                                    <button type="button" class="remove-item-btn" onclick="removerItemRequisicaoEncomenda(this)">Remover</button>
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
             }
         </div>
         <span asp-validation-for="ItensRequisicao" class="text-danger d-block mb-2"></span>
@@ -250,7 +246,6 @@
         var itemIndexEncomenda = parseInt('@(Model.ItensRequisicao?.Count ?? 0)');
 
         var optionsHtml = '<option value="">-- Selecione o Material --</option>';
-
         @if (Model.MateriaisDisponiveis != null)
         {
                 foreach (var item in Model.MateriaisDisponiveis)
@@ -271,14 +266,12 @@
                     if (e.target.checked) {
                         dropdown.style.display = 'none';
                         dropdown.disabled = true;
-
                         input.style.display = 'block';
                         input.disabled = false;
                         input.focus();
                     } else {
                         dropdown.style.display = 'block';
                         dropdown.disabled = false;
-
                         input.style.display = 'none';
                         input.disabled = true;
                         input.value = '';
@@ -295,23 +288,19 @@
                             <div class="row">
                                 <div class="col-md-7 form-group material-selection-group">
                                     <label class="form-label">Material</label>
-
                                     <select name="ItensRequisicao[${itemIndexEncomenda}].NomeMaterialOuId" class="form-select material-dropdown">
                                         ${optionsHtml}
                                     </select>
-
                                     <input type="text" name="ItensRequisicao[${itemIndexEncomenda}].NomeMaterialOuId" class="form-control material-input" placeholder="Digite o nome do material..." style="display:none;" disabled />
-
                                     <div class="toggle-material-wrapper">
                                         <input type="checkbox" class="toggle-material-checkbox" id="toggle_${itemIndexEncomenda}">
                                         <label for="toggle_${itemIndexEncomenda}" style="cursor:pointer;">Outro / Não listado</label>
                                     </div>
-
                                     <span class="text-danger field-validation-valid" data-valmsg-for="ItensRequisicao[${itemIndexEncomenda}].NomeMaterialOuId" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="col-md-3 form-group">
                                     <label class="form-label">Quantidade</label>
-                                    <input type="number" min="1" value="1" name="ItensRequisicao[${itemIndexEncomenda}].Quantidade" class="form-control" />
+                                    <input type="number" step="0.01" min="0.01" value="1" name="ItensRequisicao[${itemIndexEncomenda}].Quantidade" class="form-control" />
                                 </div>
                                 <div class="col-md-2 d-flex align-items-end form-group">
                                     <button type="button" class="remove-item-btn" onclick="removerItemRequisicaoEncomenda(this)">Remover</button>
@@ -320,7 +309,6 @@
                         </div>`;
 
                     container.insertAdjacentHTML('beforeend', newItemHtml);
-
                     const form = container.closest('form');
                     if (form && window.jQuery) {
                         $(form).removeData("validator").removeData("unobtrusiveValidation");

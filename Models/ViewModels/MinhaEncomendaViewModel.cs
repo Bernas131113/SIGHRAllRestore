@@ -31,8 +31,8 @@ namespace SIGHR.Models.ViewModels
         /// <summary>
         /// O número total de itens (somatório das quantidades) na encomenda.
         /// </summary>
-        [Display(Name = "Nº de Itens")]
-        public int QuantidadeTotalItens { get; set; }
+        [Display(Name = "Qtd Total")]
+        public double QuantidadeTotalItens { get; set; }
 
         /// <summary>
         /// O estado atual da encomenda (ex: "Pendente", "Enviada").
