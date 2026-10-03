@@ -1,4 +1,4 @@
-﻿// Em: Areas/Identity/Data/SIGHRUser.cs
+// Em: Areas/Identity/Data/SIGHRUser.cs
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Microsoft.AspNetCore.Identity;
 using SIGHR.Models;
@@ -20,7 +20,7 @@ namespace SIGHR.Areas.Identity.Data
         [Column(TypeName = "bytea")] // Tipo específico para PostgreSQL, otimizado para byte array
         public byte[]? FacialProfile { get; set; }
 
-        public int DiasFeriasDisponiveis { get; set; } = 24;
+        public int DiasFeriasDisponiveis { get; set; } = 22;
 
         public int AnoUltimoCreditoFerias { get; set; } = DateTime.UtcNow.Year;
 
